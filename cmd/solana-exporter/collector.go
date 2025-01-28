@@ -5,12 +5,13 @@ import (
 	"errors"
 	"fmt"
 
+	"slices"
+
 	"github.com/asymmetric-research/solana-exporter/pkg/api"
 	"github.com/asymmetric-research/solana-exporter/pkg/rpc"
 	"github.com/asymmetric-research/solana-exporter/pkg/slog"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
-	"slices"
 )
 
 const (
@@ -34,6 +35,10 @@ const (
 	TransactionTypeVote    = "vote"
 	TransactionTypeNonVote = "non_vote"
 )
+
+type semVersion struct {
+	major, minor, patch int
+}
 
 type SolanaCollector struct {
 	rpcClient *rpc.Client
@@ -60,6 +65,7 @@ type SolanaCollector struct {
 	NodeIdentity                 *GaugeDesc
 	NodeIsActive                 *GaugeDesc
 	FoundationMinRequiredVersion *GaugeDesc
+	NodeVersionOutdated          *GaugeDesc
 }
 
 func NewSolanaCollector(rpcClient *rpc.Client, apiClient *api.Client, config *ExporterConfig) *SolanaCollector {
@@ -149,6 +155,10 @@ func NewSolanaCollector(rpcClient *rpc.Client, apiClient *api.Client, config *Ex
 			"Minimum required Solana version for the foundation delegation program",
 			VersionLabel, ClusterLabel,
 		),
+		NodeVersionOutdated: NewGaugeDesc(
+			"solana_node_version_outdated",
+			"Whether the node version is below the foundation's minimum required version (1 = outdated, 0 = current)",
+		),
 	}
 	return collector
 }
@@ -171,6 +181,7 @@ func (c *SolanaCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.NodeFirstAvailableBlock.Desc
 	ch <- c.NodeIsActive.Desc
 	ch <- c.FoundationMinRequiredVersion.Desc
+	ch <- c.NodeVersionOutdated.Desc
 }
 
 func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- prometheus.Metric) {
@@ -374,6 +385,29 @@ func (c *SolanaCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collectBalances(ctx, ch)
 	c.collectMinRequiredVersion(ctx, ch)
 
+	// Add version comparison after both versions are collected
+	version, err := c.rpcClient.GetVersion(ctx)
+	if err != nil {
+		ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+	} else {
+		genesisHash, err := c.rpcClient.GetGenesisHash(ctx)
+		if err != nil {
+			ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+		} else {
+			cluster, err := rpc.GetClusterFromGenesisHash(genesisHash)
+			if err != nil {
+				ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+			} else {
+				minVersion, err := c.apiClient.GetMinRequiredVersion(ctx, cluster)
+				if err != nil {
+					ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+				} else if version != "" && minVersion != "" {
+					c.collectVersionOutdated(ctx, version, minVersion, ch)
+				}
+			}
+		}
+	}
+
 	c.logger.Info("=========== END COLLECTION ===========")
 }
 
@@ -402,4 +436,53 @@ func (c *SolanaCollector) collectMinRequiredVersion(ctx context.Context, ch chan
 	}
 
 	c.logger.Info("Minimum required version collected.")
+}
+
+func (c *SolanaCollector) collectVersionOutdated(ctx context.Context, nodeVersion, minVersion string, ch chan<- prometheus.Metric) {
+	c.logger.Info("Collecting version outdated status...")
+
+	nv, err := parseVersion(nodeVersion)
+	if err != nil {
+		c.logger.Errorf("failed to parse node version: %v", err)
+		ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+		return
+	}
+
+	mv, err := parseVersion(minVersion)
+	if err != nil {
+		c.logger.Errorf("failed to parse min required version: %v", err)
+		ch <- c.NodeVersionOutdated.NewInvalidMetric(err)
+		return
+	}
+
+	outdated := 0.0
+	if nv.lessThan(mv) {
+		outdated = 1.0
+	}
+
+	ch <- c.NodeVersionOutdated.MustNewConstMetric(outdated)
+	c.logger.Info("Version outdated status collected.")
+}
+
+func parseVersion(ver string) (semVersion, error) {
+	var v semVersion
+	// Strip "v" prefix if present
+	if len(ver) > 0 && ver[0] == 'v' {
+		ver = ver[1:]
+	}
+	_, err := fmt.Sscanf(ver, "%d.%d.%d", &v.major, &v.minor, &v.patch)
+	if err != nil {
+		return semVersion{}, fmt.Errorf("invalid version format %q: %w", ver, err)
+	}
+	return v, nil
+}
+
+func (v semVersion) lessThan(other semVersion) bool {
+	if v.major != other.major {
+		return v.major < other.major
+	}
+	if v.minor != other.minor {
+		return v.minor < other.minor
+	}
+	return v.patch < other.patch
 }

@@ -226,6 +226,11 @@ func TestSolanaCollector(t *testing.T) {
 	mock := api.NewMockClient()
 	mock.SetMinRequiredVersion("2.0.20")
 
+	// First test case - outdated version
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getVersion", map[string]interface{}{
+		"solana-core": "2.0.0",
+	})
+
 	collector := NewSolanaCollector(
 		client,
 		mock.Client,
@@ -270,7 +275,7 @@ func TestSolanaCollector(t *testing.T) {
 			NewLV(0, StateDelinquent),
 		),
 		collector.NodeVersion.makeCollectionTest(
-			NewLV(1, "v1.0.0"),
+			NewLV(1, "2.0.0"),
 		),
 		collector.NodeIdentity.makeCollectionTest(
 			NewLV(1, "testIdentity"),
@@ -301,12 +306,38 @@ func TestSolanaCollector(t *testing.T) {
 		collector.FoundationMinRequiredVersion.makeCollectionTest(
 			NewLV(1, "mainnet-beta", "2.0.20"),
 		),
+		collector.NodeVersionOutdated.makeCollectionTest(
+			NewLV(1.0),
+		),
 	}
 
+	// Run first set of tests
 	for _, test := range testCases {
 		t.Run(test.Name, func(t *testing.T) {
 			err := testutil.CollectAndCompare(collector, bytes.NewBufferString(test.ExpectedResponse), test.Name)
 			assert.NoErrorf(t, err, "unexpected collecting result for %s: \n%s", test.Name, err)
 		})
 	}
+
+	// Second test case - equal version
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getVersion", map[string]interface{}{
+		"solana-core": "2.0.20",
+	})
+	testCases = []collectionTest{
+		collector.NodeVersionOutdated.makeCollectionTest(
+			NewLV(0.0),
+		),
+	}
+	// Run second test
+
+	// Third test case - newer version
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getVersion", map[string]interface{}{
+		"solana-core": "2.1.0",
+	})
+	testCases = []collectionTest{
+		collector.NodeVersionOutdated.makeCollectionTest(
+			NewLV(0.0),
+		),
+	}
+	// Run third test
 }

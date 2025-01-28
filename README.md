@@ -95,6 +95,7 @@ The tables below describes all the metrics collected by the `solana-exporter`:
 | `solana_node_block_height`                     | The current block height of the node.                                                                                 | N/A                           |
 | `solana_node_is_active`                        | Whether the node is active and participating in consensus.                                                            | `identity`                    |
 | `solana_foundation_min_required_version`       | Minimum required Solana version for the [solana foundation delegation program](https://solana.org/delegation-program) | `version`, `cluster`          |
+| `solana_node_version_outdated`                  | Whether the node version is below the foundation's minimum required version (1 = outdated, 0 = current)                | N/A                           |
 
 #### Light Mode
 
