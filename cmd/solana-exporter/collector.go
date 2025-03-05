@@ -328,7 +328,7 @@ func (c *SolanaCollector) collectHealth(ctx context.Context, ch chan<- prometheu
 				ch <- c.NodeNumSlotsBehind.NewInvalidMetric(err)
 				return
 			}
-			if err = rpc.UnpackRpcErrorData(rpcError, errorData); err != nil {
+			if err = rpc.UnpackRpcErrorData(rpcError, &errorData); err != nil {
 				// if we error here, it means we have the incorrect format
 				c.logger.Fatalf("failed to unpack %s rpc error: %v", rpcError.Method, err.Error())
 			}
