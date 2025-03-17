@@ -98,7 +98,9 @@ func NewExporterConfig(
 	client := rpc.NewRPCClient(rpcUrl, httpTimeout)
 	voteKeys, err := GetAssociatedVoteAccounts(ctx, client, rpc.CommitmentFinalized, nodeKeys)
 	if err != nil {
-		return nil, fmt.Errorf("error getting vote accounts: %w", err)
+		// empty the voteKeys to avoid nil pointer dereference in the following code
+		voteKeys = []string{}
+		logger.Warn("error getting vote accounts: ", err)
 	}
 
 	config := ExporterConfig{
