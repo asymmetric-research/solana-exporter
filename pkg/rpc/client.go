@@ -20,6 +20,7 @@ type (
 		RpcUrl      string
 		HttpTimeout time.Duration
 		logger      *zap.SugaredLogger
+		FiredancerMetricsPort int
 	}
 
 	Request struct {
@@ -64,8 +65,14 @@ func GetClusterFromGenesisHash(hash string) (string, error) {
 	}
 }
 
-func NewRPCClient(rpcAddr string, httpTimeout time.Duration) *Client {
-	return &Client{HttpClient: http.Client{}, RpcUrl: rpcAddr, HttpTimeout: httpTimeout, logger: slog.Get()}
+func NewRPCClient(rpcAddr string, httpTimeout time.Duration, firedancerMetricsPort int) *Client {
+	return &Client{
+		HttpClient:           http.Client{},
+		RpcUrl:              rpcAddr,
+		HttpTimeout:         httpTimeout,
+		FiredancerMetricsPort: firedancerMetricsPort,
+		logger:              slog.Get(),
+	}
 }
 
 func getResponse[T any](
@@ -296,4 +303,20 @@ func (c *Client) GetGenesisHash(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return resp.Result, nil
+}
+
+// GetFiredancerMetrics checks if the node is running Firedancer by making a request to its metrics endpoint.
+func (c *Client) GetFiredancerMetrics(ctx context.Context) (*http.Response, error) {
+	url := fmt.Sprintf("http://127.0.0.1:%d/metrics", c.FiredancerMetricsPort)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get Firedancer metrics: %w", err)
+	}
+
+	return resp, nil
 }

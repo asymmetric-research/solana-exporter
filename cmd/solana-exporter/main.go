@@ -26,7 +26,7 @@ func main() {
 		)
 	}
 
-	rpcClient := rpc.NewRPCClient(config.RpcUrl, config.HttpTimeout)
+	rpcClient := rpc.NewRPCClient(config.RpcUrl, config.HttpTimeout, config.FiredancerMetricsPort)
 	collector := NewSolanaCollector(rpcClient, config)
 	slotWatcher := NewSlotWatcher(rpcClient, config)
 	ctx, cancel := context.WithCancel(ctx)

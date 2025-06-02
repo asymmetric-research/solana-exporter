@@ -26,6 +26,7 @@ func TestNewExporterConfig(t *testing.T) {
 		wantErr                          bool
 		expectedVoteKeys                 []string
 		activeIdentity                   string
+		firedancerMetricsPort            int
 	}{
 		{
 			name:                             "valid configuration",
@@ -43,6 +44,7 @@ func TestNewExporterConfig(t *testing.T) {
 			wantErr:                          false,
 			expectedVoteKeys:                 simulator.Votekeys,
 			activeIdentity:                   simulator.Nodekeys[0],
+			firedancerMetricsPort:            7999,
 		},
 		{
 			name:                             "light mode with incompatible options",
@@ -60,6 +62,7 @@ func TestNewExporterConfig(t *testing.T) {
 			wantErr:                          true,
 			expectedVoteKeys:                 nil,
 			activeIdentity:                   simulator.Nodekeys[0],
+			firedancerMetricsPort:            7999,
 		},
 		{
 			name:                             "empty node keys",
@@ -77,6 +80,7 @@ func TestNewExporterConfig(t *testing.T) {
 			wantErr:                          false,
 			expectedVoteKeys:                 []string{},
 			activeIdentity:                   simulator.Nodekeys[0],
+			firedancerMetricsPort:            7999,
 		},
 	}
 
@@ -96,6 +100,7 @@ func TestNewExporterConfig(t *testing.T) {
 				tt.slotPace,
 				tt.activeIdentity,
 				tt.epochCleanupTime,
+				tt.firedancerMetricsPort,
 			)
 
 			// Check error expectation
@@ -119,6 +124,7 @@ func TestNewExporterConfig(t *testing.T) {
 			assert.Equal(t, tt.epochCleanupTime, config.EpochCleanupTime)
 			assert.Equal(t, tt.monitorBlockSizes, config.MonitorBlockSizes)
 			assert.Equal(t, tt.expectedVoteKeys, config.VoteKeys)
+			assert.Equal(t, tt.firedancerMetricsPort, config.FiredancerMetricsPort)
 		})
 	}
 }

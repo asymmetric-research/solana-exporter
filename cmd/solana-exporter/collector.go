@@ -21,6 +21,7 @@ const (
 	AddressLabel         = "address"
 	EpochLabel           = "epoch"
 	TransactionTypeLabel = "transaction_type"
+	IsFiredancerLabel    = "is_firedancer"
 
 	StatusSkipped = "skipped"
 	StatusValid   = "valid"
@@ -110,7 +111,7 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 		NodeVersion: NewGaugeDesc(
 			"solana_node_version",
 			"Node version of solana",
-			VersionLabel,
+			VersionLabel, IsFiredancerLabel,
 		),
 		NodeIdentity: NewGaugeDesc(
 			"solana_node_identity",
@@ -235,7 +236,14 @@ func (c *SolanaCollector) collectVersion(ctx context.Context, ch chan<- promethe
 		return
 	}
 
-	ch <- c.NodeVersion.MustNewConstMetric(1, version)
+	// Check if node is Firedancer by making a request to the metrics endpoint
+	isFiredancer := "0"
+	resp, err := c.rpcClient.GetFiredancerMetrics(ctx)
+	if err == nil && resp.StatusCode == 200 {
+		isFiredancer = "1"
+	}
+
+	ch <- c.NodeVersion.MustNewConstMetric(1, version, isFiredancer)
 	c.logger.Info("Version collected.")
 }
 
