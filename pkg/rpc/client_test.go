@@ -96,6 +96,116 @@ func TestClient_GetBlockProduction(t *testing.T) {
 	)
 }
 
+func TestClient_GetAccountInfo(t *testing.T) {
+	_, client := newMethodTester(t,
+		"getAccountInfo",
+		contextualResult[AccountInfo[map[string]any]]{
+			Context: resultContext{
+				ApiVersion: "2.2.14",
+				Slot:       343274370,
+			},
+			Value: AccountInfo[map[string]any]{
+				Data: accountInfoData[map[string]any]{
+					Parsed: accountInfoParsedData[map[string]any]{
+						Info: map[string]any{
+							"authorizedVoters": []map[string]any{
+								{
+									"authorizedVoter": "Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24",
+									"epoch":           761,
+								},
+							},
+							"authorizedWithdrawer": "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
+							"commission":           100,
+							"epochCredits": []map[string]any{
+								{
+									"credits":         "574047",
+									"epoch":           761,
+									"previousCredits": 0,
+								},
+							},
+							"lastTimestamp": map[string]any{
+								"slot":      329160377,
+								"timestamp": 1742936930,
+							},
+							"nodePubkey":  "Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24",
+							"priorVoters": []string{},
+							"rootSlot":    329160346,
+							"votes": []map[string]any{
+								{"confirmationCount": 9, "slot": 329160369},
+								{"confirmationCount": 8, "slot": 329160370},
+								{"confirmationCount": 7, "slot": 329160371},
+								{"confirmationCount": 6, "slot": 329160372},
+								{"confirmationCount": 5, "slot": 329160373},
+								{"confirmationCount": 4, "slot": 329160374},
+								{"confirmationCount": 3, "slot": 329160375},
+								{"confirmationCount": 2, "slot": 329160376},
+								{"confirmationCount": 1, "slot": 329160377},
+							},
+						},
+						Type: "vote",
+					},
+					Program: "vote",
+					Space:   3762,
+				},
+				Executable: false,
+				Lamports:   27074400,
+				Owner:      "Vote111111111111111111111111111111111111111",
+				RentEpoch:  uint64(18446744073709551615),
+				Space:      3762,
+			},
+		},
+		nil,
+	)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	var voteAccount VoteAccountInfo
+	info, err := GetAccountInfo(ctx, client, CommitmentFinalized, "CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu", &voteAccount)
+	assert.NoError(t, err)
+	assert.Equal(t,
+		&AccountInfo[VoteAccountInfo]{
+			Data: accountInfoData[VoteAccountInfo]{
+				Parsed: accountInfoParsedData[VoteAccountInfo]{
+					Info: VoteAccountInfo{
+						AuthorizedVoters: []authorizedVoter{
+							{"Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24", 761},
+						},
+						AuthorizedWithdrawer: "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
+						Commission:           100,
+						EpochCredits: []epochCredit{
+							{"574047", 761, 0},
+						},
+						LastTimestamp: lastTimestamp{329160377, 1742936930},
+						NodePubkey:    "Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24",
+						PriorVoters:   []string{},
+						RootSlot:      329160346,
+						Votes: []vote{
+							{9, 329160369},
+							{8, 329160370},
+							{7, 329160371},
+							{6, 329160372},
+							{5, 329160373},
+							{4, 329160374},
+							{3, 329160375},
+							{2, 329160376},
+							{1, 329160377},
+						},
+					},
+					Type: "vote",
+				},
+				Program: "vote",
+				Space:   3762,
+			},
+			Executable: false,
+			Lamports:   27074400,
+			Owner:      "Vote111111111111111111111111111111111111111",
+			RentEpoch:  18446744073709551615,
+			Space:      3762,
+		},
+		info,
+	)
+}
+
 func TestClient_GetEpochInfo(t *testing.T) {
 	_, client := newMethodTester(t,
 		"getEpochInfo",

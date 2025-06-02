@@ -116,6 +116,19 @@ func getResponse[T any](
 	return nil
 }
 
+// GetAccountInfo returns all information associated with the account of provided pubkey.
+// See API docs: https://solana.com/docs/rpc/http/getaccountinfo
+func GetAccountInfo[T any](
+	ctx context.Context, client *Client, commitment Commitment, address string, accountInfo *T,
+) (*AccountInfo[T], error) {
+	var resp Response[contextualResult[AccountInfo[T]]]
+	config := map[string]string{"commitment": string(commitment)}
+	if err := getResponse(ctx, client, "getAccountInfo", []any{address, config}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Result.Value, nil
+}
+
 // GetEpochInfo returns information about the current epoch.
 // See API docs: https://solana.com/docs/rpc/http/getepochinfo
 func (c *Client) GetEpochInfo(ctx context.Context, commitment Commitment) (*EpochInfo, error) {

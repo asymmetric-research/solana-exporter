@@ -22,10 +22,13 @@ type (
 	}
 
 	contextualResult[T any] struct {
-		Value   T `json:"value"`
-		Context struct {
-			Slot int64 `json:"slot"`
-		} `json:"context"`
+		Value   T             `json:"value"`
+		Context resultContext `json:"context"`
+	}
+
+	resultContext struct {
+		Slot       int64  `json:"slot"`
+		ApiVersion string `json:"apiVersion"`
 	}
 
 	EpochInfo struct {
@@ -87,6 +90,26 @@ type (
 				AccountKeys []string `json:"accountKeys"`
 			} `json:"message"`
 		} `json:"transaction"`
+	}
+
+	AccountInfo[T any] struct {
+		Data       accountInfoData[T] `json:"data"`
+		Executable bool               `json:"executable"`
+		Lamports   int64              `json:"lamports"`
+		Owner      string             `json:"owner"`
+		RentEpoch  uint64             `json:"rentEpoch"`
+		Space      int64              `json:"space"`
+	}
+
+	accountInfoData[T any] struct {
+		Parsed  accountInfoParsedData[T] `json:"parsed"`
+		Program string                   `json:"program"`
+		Space   int64                    `json:"space"`
+	}
+
+	accountInfoParsedData[T any] struct {
+		Info T      `json:"info"`
+		Type string `json:"type"`
 	}
 )
 
