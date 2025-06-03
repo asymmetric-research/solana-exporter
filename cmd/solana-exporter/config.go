@@ -105,7 +105,6 @@ func NewExporterConfig(
 	associatedNodekeys, associatedVotekeys, err := GetAssociatedValidatorAccounts(
 		ctx, client, rpc.CommitmentFinalized, nodekeys, votekeys,
 	)
-	fmt.Println(len(associatedNodekeys), associatedNodekeys, len(associatedVotekeys), associatedVotekeys)
 	if err != nil {
 		return nil, fmt.Errorf("error getting associated validator accounts: %w", err)
 	}

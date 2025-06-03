@@ -12,6 +12,7 @@ To use the Solana Exporter, simply run the program with the desired
 ```shell
 solana-exporter \
   -nodekey <VALIDATOR_IDENTITY_1> -nodekey <VALIDATOR_IDENTITY_2> \
+  -voteky <VALIDATOR_VOTEKEY_1> -votekey <UNSTAKED_VALIDATOR_VOTEKEY_2> \
   -balance-address <ADDRESS_1> -balance-address <ADDRESS_2> \
   -comprehensive-slot-tracking \
   -monitor-block-sizes
@@ -96,7 +97,8 @@ The exporter is configured via the following command line arguments:
 | `-light-mode`                          | Set this flag to enable light-mode. In light mode, only metrics unique to the node being queried are reported (i.e., metrics such as `solana_inflation_rewards` which are visible from any RPC node, are not reported). | `false`                   |
 | `-listen-address`                      | Prometheus listen address.                                                                                                                                                                                              | `":8080"`                 |
 | `-monitor-block-sizes`                 | Set this flag to track block sizes (number of transactions) for the configured validators.                                                                                                                              | `false`                   |
-| `-nodekey`                             | Solana nodekey (identity account) representing a validator to monitor - can set multiple times.                                                                                                                         | N/A                       |
+| `-nodekey`                             | Solana nodekey (identity account) representing a validator to monitor - can set multiple times. Can NOT be used to monitor unstaked validators.                                                                         | N/A                       |
+| `-votekey`                             | Solana votekey (vote account) representing validator to monitor - can set multiple times. Can be used to monitor unstaked validators.                                                                                   | N/A                       |
 | `-rpc-url`                             | Solana RPC URL (including protocol and path), e.g., `"http://localhost:8899"` or `"https://api.mainnet-beta.solana.com"`                                                                                                | `"http://localhost:8899"` |
 | `-slot-pace`                           | This is the time (in seconds) between slot-watching metric collections                                                                                                                                                  | `1`                       |
 | `-active-identity`                     | Validator identity public key used to determine if the node is considered active in the `solana_node_is_active` metric.                                                                                                 | N/A                       |
@@ -106,11 +108,24 @@ The exporter is configured via the following command line arguments:
 
 * `-light-mode` is incompatible with `-nodekey`, `-balance-address`, `-monitor-block-sizes`, and 
 `-comprehensive-slot-tracking`, as these options control metrics which are not monitored in `-light-mode`.
+* `-nodekey` and `-votekey` can, but need not, overlap. For instance, if you want to monitor a validator with 
+identity account `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` and vote account 
+`CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu`. The following are all valid configs:
+```shell
+# only nodekey:
+-nodekey Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24
+# only votekey:
+-votekey CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu
+# both:
+-nodekey Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24 -votekey CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu
+```
+* To monitor an unstaked validator, you **_must_** (at least) specify the validators vote account with the 
+`-votekey` parameter.
 * ***WARNING***:
   * Configuring `-comprehensive-slot-tracking` will lead to potentially thousands of new Prometheus metrics being 
   created every epoch.
-  * Configuring `-monitor-block-sizes` with many `-nodekey`'s can potentially strain the node - every block produced 
-  by a configured `-nodekey` is fetched, and a typical block can be as large as 5MB.
+  * Configuring `-monitor-block-sizes` with many tracked validators (`-nodekey`'s or `-votekey`'s) can potentially strain the node - every block produced 
+  by a tracked validator is fetched, and a typical block can be as large as 5MB.
 
 ## Metrics
 ### Overview
@@ -155,7 +170,7 @@ The following metrics are all received from the `getVoteAccounts` [RPC endpoint]
 * `solana_validator_root_slot`
 * `solana_validator_delinquent`
 
-***NOTE***: If `-comprehensive-vote-account-tracking` is configured, then these metrics are tracked for **all** 
+***NOTE***: If `-comprehensive-vote-account-tracking` is configured, then these metrics are tracked for **all** network
 validators. Regardless of comprehensive tracking, the above metrics' cluster counterparts are always tracked for easy 
 cluster-level comparison.
 

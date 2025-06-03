@@ -1,3 +1,14 @@
+# v3.0.2
+
+## Key Changes
+
+Added the `-votekey` config parameter, and in the process allowed monitoring of unstaked validators.
+
+## What's Changed.
+
+* Added the `-votekey` config parameter.
+* Allowed monitoring of unstaked validators.
+
 # v3.0.1
 
 ## Key Changes
