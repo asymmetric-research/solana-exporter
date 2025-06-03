@@ -67,6 +67,16 @@ func toString(i any) string {
 	return fmt.Sprintf("%v", i)
 }
 
+// indexOf is a simply utility function for finding the index of an item in a slice
+func indexOf[T comparable](slice []T, item T) (int, error) {
+	for i, v := range slice {
+		if v == item {
+			return i, nil
+		}
+	}
+	return 0, fmt.Errorf("item %v not found in slice", item)
+}
+
 // SelectFromSchedule takes a leader-schedule and returns a trimmed leader-schedule
 // containing only the slots within the provided range
 func SelectFromSchedule(schedule map[string][]int64, startSlot, endSlot int64) map[string][]int64 {
@@ -111,30 +121,73 @@ func GetTrimmedLeaderSchedule(
 	return trimmedLeaderSchedule, nil
 }
 
-// GetAssociatedVoteAccounts returns the votekeys associated with a given list of nodekeys
-func GetAssociatedVoteAccounts(
-	ctx context.Context, client *rpc.Client, commitment rpc.Commitment, nodekeys []string,
-) ([]string, error) {
-	voteAccounts, err := client.GetVoteAccounts(ctx, commitment)
+// GetAssociatedValidatorAccounts returns the votekeys associated with a given list of nodekeys
+func GetAssociatedValidatorAccounts(
+	ctx context.Context, client *rpc.Client, commitment rpc.Commitment, nodekeys []string, votekeys []string,
+) ([]string, []string, error) {
+	stakedVoteAccounts, err := client.GetVoteAccounts(ctx, commitment)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	// first map nodekey -> votekey:
-	voteAccountsMap := make(map[string]string)
-	for _, voteAccount := range append(voteAccounts.Current, voteAccounts.Delinquent...) {
-		voteAccountsMap[voteAccount.NodePubkey] = voteAccount.VotePubkey
+	// find all the nodekeys and votekeys for staked validators:
+	var (
+		stakedNodekeys     []string
+		stakedVotekeys     []string
+		associatedNodekeys []string
+		associatedVotekeys []string
+	)
+	for _, voteAccount := range append(stakedVoteAccounts.Current, stakedVoteAccounts.Delinquent...) {
+		stakedNodekeys = append(stakedNodekeys, voteAccount.NodePubkey)
+		stakedVotekeys = append(stakedVotekeys, voteAccount.VotePubkey)
 	}
 
-	votekeys := make([]string, len(nodekeys))
-	for i, nodeKey := range nodekeys {
-		votekey := voteAccountsMap[nodeKey]
-		if votekey == "" {
-			return nil, fmt.Errorf("failed to find vote key for node %v", nodeKey)
+	// now check if we have unstaked votekeys:
+	for _, inputVotekey := range votekeys {
+		var associatedNodekey string
+		i, err := indexOf(stakedVotekeys, inputVotekey)
+		// if there is an error, that means the votekey is not a known staked votekey,
+		// and so we check if it is an unstaked vote account
+		if err != nil {
+			var voteAccount rpc.VoteAccountInfo
+			_, err := rpc.GetAccountInfo(ctx, client, commitment, inputVotekey, &voteAccount)
+			// if we got an error, then the account must not be a vote account, so we can return this error
+			if err != nil {
+				return nil, nil, err
+			}
+			// no error means it was a vote account, so we extract the identity account
+			associatedNodekey = voteAccount.NodePubkey
 		}
-		votekeys[i] = votekey
+		// no error on the indexing means the vote account is staked, and so we can get the nodekey with the index
+		associatedNodekey = stakedNodekeys[i]
+
+		// append our output slices:
+		associatedNodekeys = append(associatedNodekeys, associatedNodekey)
+		associatedVotekeys = append(associatedVotekeys, inputVotekey)
 	}
-	return votekeys, nil
+
+	// now make sure we have the associated accounts for each input nodekey
+	for _, inputNodekey := range nodekeys {
+		// if we already have the associated accounts for it, skip:
+		if slices.Contains(associatedNodekeys, inputNodekey) {
+			continue
+		}
+		// the only way to get associated accounts for a nodekey is if it's staked:
+		i, err := indexOf(stakedNodekeys, inputNodekey)
+		// if this errors, that means there is a nodekey that we can't find associated accounts for,
+		// so we return the error
+		if err != nil {
+			return nil, nil, err
+		}
+		// no error means we found the associated vote account:
+		associatedVotekey := stakedVotekeys[i]
+
+		// append our output slices
+		associatedNodekeys = append(associatedNodekeys, inputNodekey)
+		associatedVotekeys = append(associatedVotekeys, associatedVotekey)
+	}
+
+	return associatedNodekeys, associatedVotekeys, nil
 }
 
 // FetchBalances fetches SOL balances for a list of addresses

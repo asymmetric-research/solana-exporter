@@ -72,15 +72,37 @@ func TestFetchBalances(t *testing.T) {
 	)
 }
 
-func TestGetAssociatedVoteAccounts(t *testing.T) {
+func TestGetAssociatedValidatorAccounts(t *testing.T) {
 	simulator, client := NewSimulator(t, 1)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	voteAccounts, err := GetAssociatedVoteAccounts(ctx, client, rpc.CommitmentFinalized, simulator.Nodekeys)
+	// test finding vote accounts from identities:
+	_, votekeys, err := GetAssociatedValidatorAccounts(ctx, client, rpc.CommitmentFinalized, simulator.Nodekeys, nil)
 	assert.NoError(t, err)
-	assert.Equal(t, simulator.Votekeys, voteAccounts)
+	sort.Strings(votekeys)
+	assert.Equal(t, simulator.Votekeys, votekeys)
+
+	// test finding identities from vote accounts:
+	nodekeys, _, err := GetAssociatedValidatorAccounts(ctx, client, rpc.CommitmentFinalized, nil, simulator.Votekeys)
+	assert.NoError(t, err)
+	sort.Strings(nodekeys)
+	assert.Equal(t, simulator.Nodekeys, nodekeys)
+
+	// test finding an overlapping mixture:
+	nodekeys, votekeys, err = GetAssociatedValidatorAccounts(
+		ctx,
+		client,
+		rpc.CommitmentFinalized,
+		[]string{simulator.Nodekeys[0], simulator.Nodekeys[1]},
+		[]string{simulator.Votekeys[1], simulator.Votekeys[2]},
+	)
+	assert.NoError(t, err)
+	sort.Strings(nodekeys)
+	sort.Strings(votekeys)
+	assert.Equal(t, simulator.Votekeys, votekeys)
+	assert.Equal(t, simulator.Nodekeys, nodekeys)
 }
 
 func TestGetEpochBounds(t *testing.T) {

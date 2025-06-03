@@ -17,8 +17,8 @@ type (
 		HttpTimeout                      time.Duration
 		RpcUrl                           string
 		ListenAddress                    string
-		NodeKeys                         []string
-		VoteKeys                         []string
+		Nodekeys                         []string
+		Votekeys                         []string
 		BalanceAddresses                 []string
 		ComprehensiveSlotTracking        bool
 		ComprehensiveVoteAccountTracking bool
@@ -44,7 +44,8 @@ func NewExporterConfig(
 	httpTimeout time.Duration,
 	rpcUrl string,
 	listenAddress string,
-	nodeKeys []string,
+	nodekeys []string,
+	votekeys []string,
 	balanceAddresses []string,
 	comprehensiveSlotTracking bool,
 	comprehensiveVoteAccountTracking bool,
@@ -60,7 +61,8 @@ func NewExporterConfig(
 		"httpTimeout", httpTimeout.Seconds(),
 		"rpcUrl", rpcUrl,
 		"listenAddress", listenAddress,
-		"nodeKeys", nodeKeys,
+		"nodekeys", nodekeys,
+		"votekeys", votekeys,
 		"balanceAddresses", balanceAddresses,
 		"comprehensiveSlotTracking", comprehensiveSlotTracking,
 		"comprehensiveVoteAccountTracking", comprehensiveVoteAccountTracking,
@@ -83,8 +85,12 @@ func NewExporterConfig(
 			return nil, fmt.Errorf("'-light-mode' is incompatible with `-monitor-block-sizes`")
 		}
 
-		if len(nodeKeys) > 0 {
+		if len(nodekeys) > 0 {
 			return nil, fmt.Errorf("'-light-mode' is incompatible with `-nodekey`")
+		}
+
+		if len(votekeys) > 0 {
+			return nil, fmt.Errorf("'-light-mode' is incompatible with `-votekey`")
 		}
 
 		if len(balanceAddresses) > 0 {
@@ -96,17 +102,20 @@ func NewExporterConfig(
 	ctx, cancel := context.WithTimeout(ctx, httpTimeout)
 	defer cancel()
 	client := rpc.NewRPCClient(rpcUrl, httpTimeout)
-	voteKeys, err := GetAssociatedVoteAccounts(ctx, client, rpc.CommitmentFinalized, nodeKeys)
+	associatedNodekeys, associatedVotekeys, err := GetAssociatedValidatorAccounts(
+		ctx, client, rpc.CommitmentFinalized, nodekeys, votekeys,
+	)
+	fmt.Println(len(associatedNodekeys), associatedNodekeys, len(associatedVotekeys), associatedVotekeys)
 	if err != nil {
-		return nil, fmt.Errorf("error getting vote accounts: %w", err)
+		return nil, fmt.Errorf("error getting associated validator accounts: %w", err)
 	}
 
 	config := ExporterConfig{
 		HttpTimeout:                      httpTimeout,
 		RpcUrl:                           rpcUrl,
 		ListenAddress:                    listenAddress,
-		NodeKeys:                         nodeKeys,
-		VoteKeys:                         voteKeys,
+		Nodekeys:                         associatedNodekeys,
+		Votekeys:                         associatedVotekeys,
 		BalanceAddresses:                 balanceAddresses,
 		ComprehensiveSlotTracking:        comprehensiveSlotTracking,
 		ComprehensiveVoteAccountTracking: comprehensiveVoteAccountTracking,
@@ -125,6 +134,7 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 		rpcUrl                           string
 		listenAddress                    string
 		nodekeys                         arrayFlags
+		votekeys                         arrayFlags
 		balanceAddresses                 arrayFlags
 		comprehensiveSlotTracking        bool
 		comprehensiveVoteAccountTracking bool
@@ -156,7 +166,14 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 	flag.Var(
 		&nodekeys,
 		"nodekey",
-		"Solana nodekey (identity account) representing validator to monitor - can set multiple times.",
+		"Solana nodekey (identity account) representing validator to monitor - can set multiple times. "+
+			"Can NOT be used to monitor unstaked validators.",
+	)
+	flag.Var(
+		&votekeys,
+		"votekey",
+		"Solana votekey (vote account) representing validator to monitor - can set multiple times. "+
+			"Can be used to monitor unstaked validators.",
 	)
 	flag.Var(
 		&balanceAddresses,
@@ -219,6 +236,7 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 		rpcUrl,
 		listenAddress,
 		nodekeys,
+		votekeys,
 		balanceAddresses,
 		comprehensiveSlotTracking,
 		comprehensiveVoteAccountTracking,
