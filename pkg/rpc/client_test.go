@@ -120,7 +120,7 @@ func TestClient_GetAccountInfo(t *testing.T) {
 								{
 									"credits":         "574047",
 									"epoch":           761,
-									"previousCredits": 0,
+									"previousCredits": "0",
 								},
 							},
 							"lastTimestamp": map[string]any{
@@ -159,38 +159,41 @@ func TestClient_GetAccountInfo(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var voteAccount VoteAccountInfo
-	info, err := GetAccountInfo(ctx, client, CommitmentFinalized, "CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu", &voteAccount)
+	var voteAccountData VoteAccountData
+	accountInfo, err := GetAccountInfo(
+		ctx, client, CommitmentFinalized, "CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu", &voteAccountData,
+	)
 	assert.NoError(t, err)
+	expectedData := VoteAccountData{
+		AuthorizedVoters: []authorizedVoter{
+			{"Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24", 761},
+		},
+		AuthorizedWithdrawer: "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
+		Commission:           100,
+		EpochCredits: []epochCredit{
+			{"574047", 761, "0"},
+		},
+		LastTimestamp: lastTimestamp{329160377, 1742936930},
+		NodePubkey:    "Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24",
+		PriorVoters:   []string{},
+		RootSlot:      329160346,
+		Votes: []vote{
+			{9, 329160369},
+			{8, 329160370},
+			{7, 329160371},
+			{6, 329160372},
+			{5, 329160373},
+			{4, 329160374},
+			{3, 329160375},
+			{2, 329160376},
+			{1, 329160377},
+		},
+	}
 	assert.Equal(t,
-		&AccountInfo[VoteAccountInfo]{
-			Data: accountInfoData[VoteAccountInfo]{
-				Parsed: accountInfoParsedData[VoteAccountInfo]{
-					Info: VoteAccountInfo{
-						AuthorizedVoters: []authorizedVoter{
-							{"Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24", 761},
-						},
-						AuthorizedWithdrawer: "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
-						Commission:           100,
-						EpochCredits: []epochCredit{
-							{"574047", 761, 0},
-						},
-						LastTimestamp: lastTimestamp{329160377, 1742936930},
-						NodePubkey:    "Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24",
-						PriorVoters:   []string{},
-						RootSlot:      329160346,
-						Votes: []vote{
-							{9, 329160369},
-							{8, 329160370},
-							{7, 329160371},
-							{6, 329160372},
-							{5, 329160373},
-							{4, 329160374},
-							{3, 329160375},
-							{2, 329160376},
-							{1, 329160377},
-						},
-					},
+		&AccountInfo[VoteAccountData]{
+			Data: accountInfoData[VoteAccountData]{
+				Parsed: accountInfoParsedData[VoteAccountData]{
+					Info: expectedData,
 					Type: "vote",
 				},
 				Program: "vote",
@@ -202,8 +205,9 @@ func TestClient_GetAccountInfo(t *testing.T) {
 			RentEpoch:  18446744073709551615,
 			Space:      3762,
 		},
-		info,
+		accountInfo,
 	)
+	assert.Equal(t, expectedData, voteAccountData)
 }
 
 func TestClient_GetEpochInfo(t *testing.T) {

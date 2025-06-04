@@ -124,6 +124,7 @@ func NewExporterConfig(
 		ActiveIdentity:                   activeIdentity,
 		EpochCleanupTime:                 epochCleanupTime,
 	}
+
 	return &config, nil
 }
 

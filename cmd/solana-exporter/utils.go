@@ -74,7 +74,7 @@ func indexOf[T comparable](slice []T, item T) (int, error) {
 			return i, nil
 		}
 	}
-	return 0, fmt.Errorf("item %v not found in slice", item)
+	return -1, fmt.Errorf("item %v not found in slice", item)
 }
 
 // SelectFromSchedule takes a leader-schedule and returns a trimmed leader-schedule
@@ -149,7 +149,7 @@ func GetAssociatedValidatorAccounts(
 		// if there is an error, that means the votekey is not a known staked votekey,
 		// and so we check if it is an unstaked vote account
 		if err != nil {
-			var voteAccount rpc.VoteAccountInfo
+			var voteAccount rpc.VoteAccountData
 			_, err := rpc.GetAccountInfo(ctx, client, commitment, inputVotekey, &voteAccount)
 			// if we got an error, then the account must not be a vote account, so we can return this error
 			if err != nil {
@@ -157,9 +157,10 @@ func GetAssociatedValidatorAccounts(
 			}
 			// no error means it was a vote account, so we extract the identity account
 			associatedNodekey = voteAccount.NodePubkey
+		} else {
+			// no error on the indexing means the vote account is staked, and so we can get the nodekey with the index
+			associatedNodekey = stakedNodekeys[i]
 		}
-		// no error on the indexing means the vote account is staked, and so we can get the nodekey with the index
-		associatedNodekey = stakedNodekeys[i]
 
 		// append our output slices:
 		associatedNodekeys = append(associatedNodekeys, associatedNodekey)

@@ -1,7 +1,7 @@
 package rpc
 
 type (
-	VoteAccountInfo struct {
+	VoteAccountData struct {
 		AuthorizedVoters     []authorizedVoter `json:"authorizedVoters"`
 		AuthorizedWithdrawer string            `json:"authorizedWithdrawer"`
 		Commission           int64             `json:"commission"`
@@ -21,7 +21,7 @@ type (
 	epochCredit struct {
 		Credits         string `json:"credits"`
 		Epoch           int64  `json:"epoch"`
-		PreviousCredits int64  `json:"previousCredits"`
+		PreviousCredits string `json:"previousCredits"`
 	}
 
 	lastTimestamp struct {
