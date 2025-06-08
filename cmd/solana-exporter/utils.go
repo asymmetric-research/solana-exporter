@@ -67,16 +67,6 @@ func toString(i any) string {
 	return fmt.Sprintf("%v", i)
 }
 
-// indexOf is a simply utility function for finding the index of an item in a slice
-func indexOf[T comparable](slice []T, item T) (int, error) {
-	for i, v := range slice {
-		if v == item {
-			return i, nil
-		}
-	}
-	return -1, fmt.Errorf("item %v not found in slice", item)
-}
-
 // SelectFromSchedule takes a leader-schedule and returns a trimmed leader-schedule
 // containing only the slots within the provided range
 func SelectFromSchedule(schedule map[string][]int64, startSlot, endSlot int64) map[string][]int64 {
@@ -123,7 +113,7 @@ func GetTrimmedLeaderSchedule(
 
 // GetAssociatedValidatorAccounts returns the votekeys associated with a given list of nodekeys
 func GetAssociatedValidatorAccounts(
-	ctx context.Context, client *rpc.Client, commitment rpc.Commitment, nodekeys []string, votekeys []string,
+	ctx context.Context, client *rpc.Client, commitment rpc.Commitment, nodekeys, votekeys []string,
 ) ([]string, []string, error) {
 	stakedVoteAccounts, err := client.GetVoteAccounts(ctx, commitment)
 	if err != nil {
@@ -132,9 +122,9 @@ func GetAssociatedValidatorAccounts(
 
 	// find all the nodekeys and votekeys for staked validators:
 	var (
-		stakedNodekeys     []string
-		stakedVotekeys     []string
-		associatedNodekeys []string
+		stakedNodekeys,
+		stakedVotekeys,
+		associatedNodekeys,
 		associatedVotekeys []string
 	)
 	for _, voteAccount := range append(stakedVoteAccounts.Current, stakedVoteAccounts.Delinquent...) {
@@ -145,10 +135,10 @@ func GetAssociatedValidatorAccounts(
 	// now check if we have unstaked votekeys:
 	for _, inputVotekey := range votekeys {
 		var associatedNodekey string
-		i, err := indexOf(stakedVotekeys, inputVotekey)
+		i := slices.Index(stakedVotekeys, inputVotekey)
 		// if there is an error, that means the votekey is not a known staked votekey,
 		// and so we check if it is an unstaked vote account
-		if err != nil {
+		if i < 0 {
 			var voteAccount rpc.VoteAccountData
 			_, err := rpc.GetAccountInfo(ctx, client, commitment, inputVotekey, &voteAccount)
 			// if we got an error, then the account must not be a vote account, so we can return this error
@@ -174,11 +164,11 @@ func GetAssociatedValidatorAccounts(
 			continue
 		}
 		// the only way to get associated accounts for a nodekey is if it's staked:
-		i, err := indexOf(stakedNodekeys, inputNodekey)
+		i := slices.Index(stakedNodekeys, inputNodekey)
 		// if this errors, that means there is a nodekey that we can't find associated accounts for,
 		// so we return the error
-		if err != nil {
-			return nil, nil, err
+		if i < 0 {
+			return nil, nil, fmt.Errorf("failed to find associated votekey for nodekey %v", inputNodekey)
 		}
 		// no error means we found the associated vote account:
 		associatedVotekey := stakedVotekeys[i]
