@@ -15,7 +15,8 @@ func TestNewExporterConfig(t *testing.T) {
 		httpTimeout                      time.Duration
 		rpcUrl                           string
 		listenAddress                    string
-		nodeKeys                         []string
+		nodekeys                         []string
+		votekeys                         []string
 		balanceAddresses                 []string
 		comprehensiveSlotTracking        bool
 		comprehensiveVoteAccountTracking bool
@@ -24,7 +25,8 @@ func TestNewExporterConfig(t *testing.T) {
 		slotPace                         time.Duration
 		epochCleanupTime                 time.Duration
 		wantErr                          bool
-		expectedVoteKeys                 []string
+		expectedNodekeys                 []string
+		expectedVotekeys                 []string
 		activeIdentity                   string
 	}{
 		{
@@ -32,7 +34,8 @@ func TestNewExporterConfig(t *testing.T) {
 			httpTimeout:                      60 * time.Second,
 			rpcUrl:                           simulator.Server.URL(),
 			listenAddress:                    ":8080",
-			nodeKeys:                         simulator.Nodekeys,
+			nodekeys:                         simulator.Nodekeys,
+			votekeys:                         simulator.Votekeys,
 			balanceAddresses:                 []string{"xxx", "yyy", "zzz"},
 			comprehensiveSlotTracking:        false,
 			comprehensiveVoteAccountTracking: false,
@@ -41,7 +44,8 @@ func TestNewExporterConfig(t *testing.T) {
 			slotPace:                         time.Second,
 			epochCleanupTime:                 60 * time.Second,
 			wantErr:                          false,
-			expectedVoteKeys:                 simulator.Votekeys,
+			expectedNodekeys:                 simulator.Nodekeys,
+			expectedVotekeys:                 simulator.Votekeys,
 			activeIdentity:                   simulator.Nodekeys[0],
 		},
 		{
@@ -49,7 +53,8 @@ func TestNewExporterConfig(t *testing.T) {
 			httpTimeout:                      60 * time.Second,
 			rpcUrl:                           simulator.Server.URL(),
 			listenAddress:                    ":8080",
-			nodeKeys:                         simulator.Nodekeys,
+			nodekeys:                         simulator.Nodekeys,
+			votekeys:                         simulator.Votekeys,
 			balanceAddresses:                 []string{"xxx", "yyy", "zzz"},
 			comprehensiveSlotTracking:        false,
 			comprehensiveVoteAccountTracking: false,
@@ -58,7 +63,8 @@ func TestNewExporterConfig(t *testing.T) {
 			slotPace:                         time.Second,
 			epochCleanupTime:                 60 * time.Second,
 			wantErr:                          true,
-			expectedVoteKeys:                 nil,
+			expectedNodekeys:                 nil,
+			expectedVotekeys:                 nil,
 			activeIdentity:                   simulator.Nodekeys[0],
 		},
 		{
@@ -66,7 +72,8 @@ func TestNewExporterConfig(t *testing.T) {
 			httpTimeout:                      60 * time.Second,
 			rpcUrl:                           simulator.Server.URL(),
 			listenAddress:                    ":8080",
-			nodeKeys:                         []string{},
+			nodekeys:                         []string{},
+			votekeys:                         []string{},
 			balanceAddresses:                 []string{"xxx", "yyy", "zzz"},
 			comprehensiveSlotTracking:        false,
 			comprehensiveVoteAccountTracking: false,
@@ -75,7 +82,8 @@ func TestNewExporterConfig(t *testing.T) {
 			slotPace:                         time.Second,
 			epochCleanupTime:                 60 * time.Second,
 			wantErr:                          false,
-			expectedVoteKeys:                 []string{},
+			expectedNodekeys:                 nil,
+			expectedVotekeys:                 nil,
 			activeIdentity:                   simulator.Nodekeys[0],
 		},
 	}
@@ -87,7 +95,8 @@ func TestNewExporterConfig(t *testing.T) {
 				tt.httpTimeout,
 				tt.rpcUrl,
 				tt.listenAddress,
-				tt.nodeKeys,
+				tt.nodekeys,
+				tt.votekeys,
 				tt.balanceAddresses,
 				tt.comprehensiveSlotTracking,
 				tt.comprehensiveVoteAccountTracking,
@@ -110,7 +119,8 @@ func TestNewExporterConfig(t *testing.T) {
 			assert.Equal(t, tt.httpTimeout, config.HttpTimeout)
 			assert.Equal(t, tt.rpcUrl, config.RpcUrl)
 			assert.Equal(t, tt.listenAddress, config.ListenAddress)
-			assert.Equal(t, tt.nodeKeys, config.NodeKeys)
+			assert.Equal(t, tt.expectedNodekeys, config.Nodekeys)
+			assert.Equal(t, tt.expectedVotekeys, config.Votekeys)
 			assert.Equal(t, tt.balanceAddresses, config.BalanceAddresses)
 			assert.Equal(t, tt.comprehensiveSlotTracking, config.ComprehensiveSlotTracking)
 			assert.Equal(t, tt.comprehensiveVoteAccountTracking, config.ComprehensiveVoteAccountTracking)
@@ -118,7 +128,6 @@ func TestNewExporterConfig(t *testing.T) {
 			assert.Equal(t, tt.slotPace, config.SlotPace)
 			assert.Equal(t, tt.epochCleanupTime, config.EpochCleanupTime)
 			assert.Equal(t, tt.monitorBlockSizes, config.MonitorBlockSizes)
-			assert.Equal(t, tt.expectedVoteKeys, config.VoteKeys)
 		})
 	}
 }

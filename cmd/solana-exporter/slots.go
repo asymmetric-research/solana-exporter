@@ -261,7 +261,7 @@ func (c *SlotWatcher) trackEpoch(ctx context.Context, epoch *rpc.EpochInfo) {
 
 	// update leader schedule:
 	c.logger.Infof("Updating leader schedule for epoch %v ...", c.currentEpoch)
-	leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.NodeKeys, epoch.AbsoluteSlot, c.firstSlot)
+	leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.Nodekeys, epoch.AbsoluteSlot, c.firstSlot)
 	if err != nil {
 		c.logger.Errorf("Failed to get trimmed leader schedule, bailing out: %v", err)
 	}
@@ -283,9 +283,9 @@ func (c *SlotWatcher) cleanEpoch(ctx context.Context, epoch int64) {
 	c.logger.Infof("Cleaning epoch %d", epoch)
 	epochStr := toString(epoch)
 	// rewards:
-	for i, nodekey := range c.config.NodeKeys {
+	for i, nodekey := range c.config.Nodekeys {
 		c.deleteMetricLabelValues(c.FeeRewardsMetric, "fee-rewards", nodekey, epochStr)
-		c.deleteMetricLabelValues(c.InflationRewardsMetric, "inflation-rewards", c.config.VoteKeys[i], epochStr)
+		c.deleteMetricLabelValues(c.InflationRewardsMetric, "inflation-rewards", c.config.Votekeys[i], epochStr)
 	}
 	// slots:
 	var trackedNodekeys []string
@@ -307,7 +307,7 @@ func (c *SlotWatcher) cleanEpoch(ctx context.Context, epoch int64) {
 func (c *SlotWatcher) closeCurrentEpoch(ctx context.Context, newEpoch *rpc.EpochInfo) {
 	c.logger.Infof("Closing current epoch %v, moving into epoch %v", c.currentEpoch, newEpoch.Epoch)
 	// fetch inflation rewards for epoch we about to close:
-	if len(c.config.VoteKeys) > 0 {
+	if len(c.config.Votekeys) > 0 {
 		if err := c.fetchAndEmitInflationRewards(ctx, c.currentEpoch); err != nil {
 			c.logger.Errorf("Failed to emit inflation rewards, bailing out: %v", err)
 		}
@@ -375,7 +375,7 @@ func (c *SlotWatcher) fetchAndEmitBlockProduction(ctx context.Context, startSlot
 		c.LeaderSlotsMetric.WithLabelValues(address, StatusValid).Add(valid)
 		c.LeaderSlotsMetric.WithLabelValues(address, StatusSkipped).Add(skipped)
 
-		if slices.Contains(c.config.NodeKeys, address) || c.config.ComprehensiveSlotTracking {
+		if slices.Contains(c.config.Nodekeys, address) || c.config.ComprehensiveSlotTracking {
 			c.LeaderSlotsByEpochMetric.WithLabelValues(address, epochStr, StatusValid).Add(valid)
 			c.LeaderSlotsByEpochMetric.WithLabelValues(address, epochStr, StatusSkipped).Add(skipped)
 			nodekeys = append(nodekeys, address)
@@ -485,13 +485,13 @@ func (c *SlotWatcher) fetchAndEmitInflationRewards(ctx context.Context, epoch in
 		return nil
 	}
 	c.logger.Infof("Fetching inflation reward for epoch %v ...", toString(epoch))
-	rewardInfos, err := c.client.GetInflationReward(ctx, rpc.CommitmentConfirmed, c.config.VoteKeys, epoch)
+	rewardInfos, err := c.client.GetInflationReward(ctx, rpc.CommitmentConfirmed, c.config.Votekeys, epoch)
 	if err != nil {
 		return fmt.Errorf("error fetching inflation rewards: %w", err)
 	}
 
 	for i, rewardInfo := range rewardInfos {
-		address := c.config.VoteKeys[i]
+		address := c.config.Votekeys[i]
 		reward := float64(rewardInfo.Amount) / rpc.LamportsInSol
 		c.InflationRewardsMetric.WithLabelValues(address, toString(epoch)).Add(reward)
 	}

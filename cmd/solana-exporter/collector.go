@@ -193,7 +193,7 @@ func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- pro
 			float64(account.LastVote),
 			float64(account.RootSlot)
 
-		if slices.Contains(c.config.NodeKeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
+		if slices.Contains(c.config.Nodekeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
 			ch <- c.ValidatorActiveStake.MustNewConstMetric(stake, accounts...)
 			ch <- c.ValidatorLastVote.MustNewConstMetric(lastVote, accounts...)
 			ch <- c.ValidatorRootSlot.MustNewConstMetric(rootSlot, accounts...)
@@ -206,12 +206,12 @@ func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- pro
 
 	{
 		for _, account := range voteAccounts.Current {
-			if slices.Contains(c.config.NodeKeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
+			if slices.Contains(c.config.Nodekeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
 				ch <- c.ValidatorDelinquent.MustNewConstMetric(0, account.VotePubkey, account.NodePubkey)
 			}
 		}
 		for _, account := range voteAccounts.Delinquent {
-			if slices.Contains(c.config.NodeKeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
+			if slices.Contains(c.config.Nodekeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
 				ch <- c.ValidatorDelinquent.MustNewConstMetric(1, account.VotePubkey, account.NodePubkey)
 			}
 		}
@@ -294,7 +294,7 @@ func (c *SolanaCollector) collectBalances(ctx context.Context, ch chan<- prometh
 	}
 	c.logger.Info("Collecting balances...")
 	balances, err := FetchBalances(
-		ctx, c.rpcClient, CombineUnique(c.config.BalanceAddresses, c.config.NodeKeys, c.config.VoteKeys),
+		ctx, c.rpcClient, CombineUnique(c.config.BalanceAddresses, c.config.Nodekeys, c.config.Votekeys),
 	)
 	if err != nil {
 		c.logger.Errorf("failed to get balances: %v", err)
