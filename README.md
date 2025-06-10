@@ -12,7 +12,7 @@ To use the Solana Exporter, simply run the program with the desired
 ```shell
 solana-exporter \
   -nodekey <VALIDATOR_IDENTITY_1> -nodekey <VALIDATOR_IDENTITY_2> \
-  -voteky <VALIDATOR_VOTEKEY_1> -votekey <UNSTAKED_VALIDATOR_VOTEKEY_2> \
+  -voteky <VALIDATOR_VOTEKEY_1> -votekey <UNSTAKED_VALIDATOR_VOTEKEY_1> \
   -balance-address <ADDRESS_1> -balance-address <ADDRESS_2> \
   -comprehensive-slot-tracking \
   -monitor-block-sizes
@@ -108,7 +108,7 @@ The exporter is configured via the following command line arguments:
 
 * `-light-mode` is incompatible with `-nodekey`, `-balance-address`, `-monitor-block-sizes`, and 
 `-comprehensive-slot-tracking`, as these options control metrics which are not monitored in `-light-mode`.
-* `-nodekey` and `-votekey` can, but need not, overlap. For instance, if you want to monitor a validator with 
+* `-nodekey` and `-votekey` may, but need not, overlap. For instance, if you want to monitor a validator with 
 identity account `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` and vote account 
 `CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu`. The following are all valid configs:
 ```shell
