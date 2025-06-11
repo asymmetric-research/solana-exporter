@@ -371,7 +371,7 @@ func TestClient_GetVoteAccounts(t *testing.T) {
 		map[string]any{
 			"current": []map[string]any{
 				{
-					"commission":       0,
+					"commission":       11,
 					"epochVoteAccount": true,
 					"epochCredits":     [][]int{{1, 64, 0}, {2, 192, 64}},
 					"nodePubkey":       "B97CCUW3AEZFGy6uUg6zUdnNYvnVq5VG8PUtb2HayTDD",
@@ -397,6 +397,7 @@ func TestClient_GetVoteAccounts(t *testing.T) {
 					LastVote:       147,
 					ActivatedStake: 42,
 					VotePubkey:     "3ZT31jkAGhUaw8jsy4bTknwBMP8i4Eueh52By4zXcsVw",
+					Commission:     11,
 				},
 			},
 		},

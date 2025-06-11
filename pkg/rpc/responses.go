@@ -46,6 +46,7 @@ type (
 		NodePubkey     string `json:"nodePubkey"`
 		RootSlot       int    `json:"rootSlot"`
 		VotePubkey     string `json:"votePubkey"`
+		Commission     int64  `json:"commission"`
 	}
 
 	VoteAccounts struct {

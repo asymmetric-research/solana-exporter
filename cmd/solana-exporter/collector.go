@@ -55,6 +55,7 @@ type SolanaCollector struct {
 	NodeFirstAvailableBlock *GaugeDesc
 	NodeIdentity            *GaugeDesc
 	NodeIsActive            *GaugeDesc
+	ValidatorCommission     *GaugeDesc
 }
 
 func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCollector {
@@ -138,6 +139,11 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 			fmt.Sprintf("Whether the node is active and participating in consensus (using %s pubkey)", IdentityLabel),
 			IdentityLabel,
 		),
+		ValidatorCommission: NewGaugeDesc(
+			"solana_validator_commission",
+			fmt.Sprintf("Validator commission, as a percentage (represented by %s and %s)", VotekeyLabel, NodekeyLabel),
+			VotekeyLabel, NodekeyLabel,
+		),
 	}
 	return collector
 }
@@ -159,6 +165,7 @@ func (c *SolanaCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.NodeMinimumLedgerSlot.Desc
 	ch <- c.NodeFirstAvailableBlock.Desc
 	ch <- c.NodeIsActive.Desc
+	ch <- c.ValidatorCommission.Desc
 }
 
 func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- prometheus.Metric) {
@@ -178,6 +185,7 @@ func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- pro
 		ch <- c.ClusterRootSlot.NewInvalidMetric(err)
 		ch <- c.ValidatorDelinquent.NewInvalidMetric(err)
 		ch <- c.ClusterValidatorCount.NewInvalidMetric(err)
+		ch <- c.ValidatorCommission.NewInvalidMetric(err)
 		return
 	}
 
@@ -188,15 +196,17 @@ func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- pro
 	)
 	for _, account := range append(voteAccounts.Current, voteAccounts.Delinquent...) {
 		accounts := []string{account.VotePubkey, account.NodePubkey}
-		stake, lastVote, rootSlot :=
+		stake, lastVote, rootSlot, commission :=
 			float64(account.ActivatedStake)/rpc.LamportsInSol,
 			float64(account.LastVote),
-			float64(account.RootSlot)
+			float64(account.RootSlot),
+			float64(account.Commission)
 
 		if slices.Contains(c.config.Nodekeys, account.NodePubkey) || c.config.ComprehensiveVoteAccountTracking {
 			ch <- c.ValidatorActiveStake.MustNewConstMetric(stake, accounts...)
 			ch <- c.ValidatorLastVote.MustNewConstMetric(lastVote, accounts...)
 			ch <- c.ValidatorRootSlot.MustNewConstMetric(rootSlot, accounts...)
+			ch <- c.ValidatorCommission.MustNewConstMetric(commission, accounts...)
 		}
 
 		totalStake += stake
