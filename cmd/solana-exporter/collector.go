@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"slices"
+
 	"github.com/asymmetric-research/solana-exporter/pkg/rpc"
 	"github.com/asymmetric-research/solana-exporter/pkg/slog"
 	"github.com/prometheus/client_golang/prometheus"
 	"go.uber.org/zap"
-	"slices"
 )
 
 const (
@@ -272,6 +273,10 @@ func (c *SolanaCollector) collectIdentity(ctx context.Context, ch chan<- prometh
 }
 
 func (c *SolanaCollector) collectMinimumLedgerSlot(ctx context.Context, ch chan<- prometheus.Metric) {
+	if c.config.LightMode {
+		c.logger.Debug("Skipping minimum ledger slot collection in light mode.")
+		return
+	}
 	c.logger.Info("Collecting minimum ledger slot...")
 	slot, err := c.rpcClient.GetMinimumLedgerSlot(ctx)
 	if err != nil {
@@ -285,6 +290,10 @@ func (c *SolanaCollector) collectMinimumLedgerSlot(ctx context.Context, ch chan<
 }
 
 func (c *SolanaCollector) collectFirstAvailableBlock(ctx context.Context, ch chan<- prometheus.Metric) {
+	if c.config.LightMode {
+		c.logger.Debug("Skipping first available block collection in light mode.")
+		return
+	}
 	c.logger.Info("Collecting first available block...")
 	block, err := c.rpcClient.GetFirstAvailableBlock(ctx)
 	if err != nil {
