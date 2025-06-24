@@ -311,11 +311,6 @@ func (c *SlotWatcher) cleanEpoch(ctx context.Context, epoch int64) {
 // remaining slots in the "current" epoch before we start tracking the new one.
 func (c *SlotWatcher) closeCurrentEpoch(ctx context.Context, newEpoch *rpc.EpochInfo) {
 	c.logger.Infof("Closing current epoch %v, moving into epoch %v", c.currentEpoch, newEpoch.Epoch)
-	if c.config.LightMode {
-		// In light mode, we only need to update epoch tracking numbers
-		c.trackEpoch(ctx, newEpoch)
-		return
-	}
 
 	// fetch inflation rewards for epoch we about to close:
 	if len(c.config.Votekeys) > 0 {
@@ -346,11 +341,6 @@ func (c *SlotWatcher) checkValidSlotRange(from, to int64) error {
 
 // moveSlotWatermark performs all the slot-watching tasks required to move the slotWatermark to the provided 'to' slot.
 func (c *SlotWatcher) moveSlotWatermark(ctx context.Context, to int64) {
-	if c.config.LightMode {
-		c.logger.Debugf("Skipping slot watermark movement in light mode (would move %v -> %v)", c.slotWatermark, to)
-		c.slotWatermark = to
-		return
-	}
 	c.logger.Infof("Moving watermark %v -> %v", c.slotWatermark, to)
 	startSlot := c.slotWatermark + 1
 	c.fetchAndEmitBlockProduction(ctx, startSlot, to)
