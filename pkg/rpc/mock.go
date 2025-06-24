@@ -58,6 +58,7 @@ type (
 		LastVote   int
 		Delinquent bool
 		RootSlot   int
+		Commission int64
 	}
 )
 
@@ -264,6 +265,7 @@ func (s *MockServer) getResult(method string, params ...any) (any, *Error) {
 				"nodePubkey":     nodekey,
 				"rootSlot":       info.RootSlot,
 				"votePubkey":     info.Votekey,
+				"commission":     info.Commission,
 			}
 			if info.Delinquent {
 				delinquentVoteAccounts = append(delinquentVoteAccounts, voteAccount)

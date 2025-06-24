@@ -50,6 +50,7 @@ func NewSimulator(t *testing.T, slot int) (*Simulator, *rpc.Client) {
 			Votekey:    votekeys[i],
 			Stake:      1_000_000,
 			Delinquent: false,
+			Commission: 11,
 		}
 	}
 	leaderSchedule := map[string][]int{
@@ -290,6 +291,11 @@ func TestSolanaCollector(t *testing.T) {
 		),
 		collector.NodeFirstAvailableBlock.makeCollectionTest(
 			NewLV(11),
+		),
+		collector.ValidatorCommission.makeCollectionTest(
+			NewLV(11, "aaa", "AAA"),
+			NewLV(11, "bbb", "BBB"),
+			NewLV(11, "ccc", "CCC"),
 		),
 	}
 
