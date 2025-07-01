@@ -4,11 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/asymmetric-research/solana-exporter/pkg/slog"
-	"go.uber.org/zap"
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/asymmetric-research/solana-exporter/pkg/slog"
+	"go.uber.org/zap"
 
 	"github.com/asymmetric-research/solana-exporter/pkg/rpc"
 	"github.com/prometheus/client_golang/prometheus"
@@ -260,12 +261,16 @@ func (c *SlotWatcher) trackEpoch(ctx context.Context, epoch *rpc.EpochInfo) {
 	c.EpochLastSlotMetric.Set(float64(c.lastSlot))
 
 	// update leader schedule:
-	c.logger.Infof("Updating leader schedule for epoch %v ...", c.currentEpoch)
-	leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.Nodekeys, epoch.AbsoluteSlot, c.firstSlot)
-	if err != nil {
-		c.logger.Errorf("Failed to get trimmed leader schedule, bailing out: %v", err)
+	if !c.config.LightMode {
+		c.logger.Infof("Updating leader schedule for epoch %v ...", c.currentEpoch)
+		leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.Nodekeys, epoch.AbsoluteSlot, c.firstSlot)
+		if err != nil {
+			c.logger.Errorf("Failed to get trimmed leader schedule, bailing out: %v", err)
+		}
+		c.leaderSchedule = leaderSchedule
+	} else {
+		c.logger.Debug("Skipping leader schedule update in light mode")
 	}
-	c.leaderSchedule = leaderSchedule
 }
 
 // cleanEpoch deletes old epoch-labelled metrics which are no longer being updated due to an epoch change.
@@ -306,6 +311,7 @@ func (c *SlotWatcher) cleanEpoch(ctx context.Context, epoch int64) {
 // remaining slots in the "current" epoch before we start tracking the new one.
 func (c *SlotWatcher) closeCurrentEpoch(ctx context.Context, newEpoch *rpc.EpochInfo) {
 	c.logger.Infof("Closing current epoch %v, moving into epoch %v", c.currentEpoch, newEpoch.Epoch)
+
 	// fetch inflation rewards for epoch we about to close:
 	if len(c.config.Votekeys) > 0 {
 		if err := c.fetchAndEmitInflationRewards(ctx, c.currentEpoch); err != nil {
