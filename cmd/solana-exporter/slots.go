@@ -261,16 +261,16 @@ func (c *SlotWatcher) trackEpoch(ctx context.Context, epoch *rpc.EpochInfo) {
 	c.EpochLastSlotMetric.Set(float64(c.lastSlot))
 
 	// update leader schedule:
-	if !c.config.LightMode {
-		c.logger.Infof("Updating leader schedule for epoch %v ...", c.currentEpoch)
-		leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.Nodekeys, epoch.AbsoluteSlot, c.firstSlot)
-		if err != nil {
-			c.logger.Errorf("Failed to get trimmed leader schedule, bailing out: %v", err)
-		}
-		c.leaderSchedule = leaderSchedule
-	} else {
+	if c.config.LightMode {
 		c.logger.Debug("Skipping leader schedule update in light mode")
+		return
 	}
+	c.logger.Infof("Updating leader schedule for epoch %v ...", c.currentEpoch)
+	leaderSchedule, err := GetTrimmedLeaderSchedule(ctx, c.client, c.config.Nodekeys, epoch.AbsoluteSlot, c.firstSlot)
+	if err != nil {
+		c.logger.Errorf("Failed to get trimmed leader schedule, bailing out: %v", err)
+	}
+	c.leaderSchedule = leaderSchedule
 }
 
 // cleanEpoch deletes old epoch-labelled metrics which are no longer being updated due to an epoch change.
