@@ -7,7 +7,7 @@ rule_files:
 scrape_configs:
   - job_name: 'solana-exporter'
     static_configs:
-      - targets: ['localhost:8080']
+      - targets: ['host.docker.internal:8082']
         labels:
           app: 'solana'
           hostname: 'my-host.name'
