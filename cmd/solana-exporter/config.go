@@ -98,15 +98,19 @@ func NewExporterConfig(
 		}
 	}
 
-	// get votekeys from rpc:
-	ctx, cancel := context.WithTimeout(ctx, httpTimeout)
-	defer cancel()
-	client := rpc.NewRPCClient(rpcUrl, httpTimeout)
-	associatedNodekeys, associatedVotekeys, err := GetAssociatedValidatorAccounts(
-		ctx, client, rpc.CommitmentFinalized, nodekeys, votekeys,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error getting associated validator accounts: %w", err)
+	// get votekeys from rpc (skip in light mode since nodekeys/votekeys are empty):
+	var associatedNodekeys, associatedVotekeys []string
+	if !lightMode {
+		ctx, cancel := context.WithTimeout(ctx, httpTimeout)
+		defer cancel()
+		client := rpc.NewRPCClient(rpcUrl, httpTimeout)
+		var err error
+		associatedNodekeys, associatedVotekeys, err = GetAssociatedValidatorAccounts(
+			ctx, client, rpc.CommitmentFinalized, nodekeys, votekeys,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error getting associated validator accounts: %w", err)
+		}
 	}
 
 	config := ExporterConfig{

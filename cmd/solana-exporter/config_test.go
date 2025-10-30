@@ -86,6 +86,25 @@ func TestNewExporterConfig(t *testing.T) {
 			expectedVotekeys:                 nil,
 			activeIdentity:                   simulator.Nodekeys[0],
 		},
+		{
+			name:                             "valid light mode configuration",
+			httpTimeout:                      60 * time.Second,
+			rpcUrl:                           "http://invalid-rpc:9999",
+			listenAddress:                    ":8080",
+			nodekeys:                         []string{},
+			votekeys:                         []string{},
+			balanceAddresses:                 []string{},
+			comprehensiveSlotTracking:        false,
+			comprehensiveVoteAccountTracking: false,
+			monitorBlockSizes:                false,
+			lightMode:                        true,
+			slotPace:                         time.Second,
+			epochCleanupTime:                 60 * time.Second,
+			wantErr:                          false,
+			expectedNodekeys:                 nil,
+			expectedVotekeys:                 nil,
+			activeIdentity:                   "",
+		},
 	}
 
 	for _, tt := range tests {
