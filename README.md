@@ -141,6 +141,7 @@ The tables below describes all the metrics collected by the `solana-exporter`:
 | `solana_validator_root_slot`                   | Root slot per validator.                                                                                              | `votekey`, `nodekey`          |
 | `solana_cluster_root_slot`                     | Max root slot of the cluster.                                                                                         | N/A                           |
 | `solana_validator_delinquent`                  | Whether a validator is delinquent.                                                                                    | `votekey`, `nodekey`          |
+| `solana_validator_commission`                  | Validator commission, as a percentage.                                                                                | `votekey`, `nodekey`          |
 | `solana_cluster_validator_count`               | Total number of validators in the cluster.                                                                            | `state`                       |
 | `solana_account_balance`                       | Solana account balances.                                                                                              | `address`                     |
 | `solana_node_version`                          | Node version of solana.                                                                                               | `version`                     |
@@ -169,6 +170,7 @@ The following metrics are all received from the `getVoteAccounts` [RPC endpoint]
 * `solana_validator_last_vote`
 * `solana_validator_root_slot`
 * `solana_validator_delinquent`
+* `solana_validator_commission`
 
 ***NOTE***: If `-comprehensive-vote-account-tracking` is configured, then these metrics are tracked for **all** network
 validators. Regardless of comprehensive tracking, the above metrics' cluster counterparts are always tracked for easy 

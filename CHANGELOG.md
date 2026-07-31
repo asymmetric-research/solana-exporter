@@ -1,3 +1,28 @@
+# v3.1.0
+
+## Key Changes
+
+Added validator commission monitoring through the new `solana_validator_commission` metric, and improved light mode
+support for private RPC providers.
+
+## What's Changed
+
+* Added the `solana_validator_commission` metric (**[@johnstonematt](https://github.com/johnstonematt)**).
+* Skipped RPC methods that are unavailable on private RPC providers when running in light mode
+  (**[@hoanhan101](https://github.com/hoanhan101)**).
+* Skipped the `getVoteAccounts` call during config initialisation when running in light mode
+  (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
+* Fixed a `votekey` typo in the README (**[@brittcyr](https://github.com/brittcyr)**).
+
+## New Contributors
+
+* **[@hoanhan101](https://github.com/hoanhan101)** made their first contribution in
+  **[#99](https://github.com/asymmetric-research/solana-exporter/pull/99)**.
+* **[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)** made their first contribution in
+  **[#104](https://github.com/asymmetric-research/solana-exporter/pull/104)**.
+* **[@brittcyr](https://github.com/brittcyr)** made their first contribution in
+  **[#101](https://github.com/asymmetric-research/solana-exporter/pull/101)**.
+
 # v3.0.2
 
 ## Key Changes
