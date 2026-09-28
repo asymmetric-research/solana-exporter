@@ -44,6 +44,8 @@ type (
 func NewSimulator(t *testing.T, slot int) (*Simulator, *rpc.Client) {
 	nodekeys := []string{"aaa", "bbb", "ccc"}
 	votekeys := []string{"AAA", "BBB", "CCC"}
+	// "ccc" deliberately has no BLS pubkey set:
+	blsPubkeys := []string{"blsAAA", "blsBBB", ""}
 	feeRewardLamports, inflationRewardLamports := 10, 10
 
 	validatorInfos := make(map[string]rpc.MockValidatorInfo)
@@ -53,6 +55,7 @@ func NewSimulator(t *testing.T, slot int) (*Simulator, *rpc.Client) {
 			Stake:      1_000_000,
 			Delinquent: false,
 			Commission: 11,
+			BlsPubkey:  blsPubkeys[i],
 		}
 	}
 	leaderSchedule := map[string][]int{
@@ -307,6 +310,11 @@ func TestSolanaCollector(t *testing.T) {
 			NewLV(11, "aaa", "AAA"),
 			NewLV(11, "bbb", "BBB"),
 			NewLV(11, "ccc", "CCC"),
+		),
+		collector.ValidatorBlsPubkeySet.makeCollectionTest(
+			NewLV(1, "aaa", "AAA"),
+			NewLV(1, "bbb", "BBB"),
+			NewLV(0, "ccc", "CCC"),
 		),
 	}
 
