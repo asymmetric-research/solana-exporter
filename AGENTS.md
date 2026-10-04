@@ -82,7 +82,8 @@ Tests use `MockServer` (`pkg/rpc/mock.go`), an in-process `httptest` server whos
 `config.go` defines `ExporterConfig` and parses CLI flags in `NewExporterConfigFromCLI`. Note two behaviors when
 adding/changing flags:
 - **Light mode** (`-light-mode`) is validated as mutually exclusive with `-nodekey`, `-votekey`, `-balance-address`,
-  `-comprehensive-slot-tracking`, `-comprehensive-vote-account-tracking`, and `-monitor-block-sizes`. Every collection
+  `-comprehensive-slot-tracking`, `-comprehensive-vote-account-tracking`, `-monitor-block-sizes`, and
+  `-monitor-alpenglow-vote-inclusion`. Every collection
   path checks `config.LightMode` and skips metrics observable from any RPC node, exporting only node-local ones.
 - On startup (non-light-mode) config makes RPC calls via `GetAssociatedValidatorAccounts` to resolve/pair the provided
   nodekeys and votekeys, so constructing a config requires a reachable RPC node.

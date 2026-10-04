@@ -20,3 +20,9 @@ groups:
       - record: solana:validator_day_skip_rate
         expr: |-
           sum by (hostname, nodekey) (increase(solana_validator_leader_slots_total{app="solana",status="skipped"}[1d])) / sum by (hostname, nodekey) (increase(solana_validator_leader_slots_total{app="solana"}[1d]))
+      - record: solana:validator_hour_alpenglow_vote_inclusion
+        expr: |-
+          sum by (hostname, votekey) (increase(solana_validator_alpenglow_reward_slots_total{app="solana",status="included"}[1h])) / sum by (hostname, votekey) (increase(solana_validator_alpenglow_reward_slots_total{app="solana"}[1h]))
+      - record: solana:validator_day_alpenglow_vote_inclusion
+        expr: |-
+          sum by (hostname, votekey) (increase(solana_validator_alpenglow_reward_slots_total{app="solana",status="included"}[1d])) / sum by (hostname, votekey) (increase(solana_validator_alpenglow_reward_slots_total{app="solana"}[1d]))

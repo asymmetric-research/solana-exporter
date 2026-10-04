@@ -1,6 +1,12 @@
 // Package rpc provides a client and response types for the Solana JSON-RPC API.
 package rpc
 
+import (
+	"fmt"
+	"math"
+	"strconv"
+)
+
 type (
 	// VoteAccountData is the parsed on-chain data of a vote account.
 	VoteAccountData struct {
@@ -21,8 +27,10 @@ type (
 	}
 
 	epochCredit struct {
-		Credits         string `json:"credits"`
-		Epoch           int64  `json:"epoch"`
+		Credits string `json:"credits"`
+		// Epoch is a u64: when a vote account migrates to Alpenglow, agave appends a marker entry
+		// (AG_MIGRATION_EPOCH_CREDIT) whose fields are all u64::MAX.
+		Epoch           uint64 `json:"epoch"`
 		PreviousCredits string `json:"previousCredits"`
 	}
 
@@ -36,3 +44,24 @@ type (
 		Slot              int64 `json:"slot"`
 	}
 )
+
+// alpenglowMigrationMarkerEpoch is the epoch of the (u64::MAX, u64::MAX, u64::MAX) entry that agave pushes into
+// epochCredits when a vote account migrates to Alpenglow (AG_MIGRATION_EPOCH_CREDIT).
+const alpenglowMigrationMarkerEpoch = math.MaxUint64
+
+// TotalCredits returns the vote account's cumulative credits, as held by its latest epochCredits entry. The
+// Alpenglow migration marker is skipped: the first entry after it carries on from the credits before it.
+func (v *VoteAccountData) TotalCredits() (uint64, error) {
+	for i := len(v.EpochCredits) - 1; i >= 0; i-- {
+		entry := v.EpochCredits[i]
+		if entry.Epoch == alpenglowMigrationMarkerEpoch {
+			continue
+		}
+		credits, err := strconv.ParseUint(entry.Credits, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("failed to parse epoch credits: %w", err)
+		}
+		return credits, nil
+	}
+	return 0, nil
+}

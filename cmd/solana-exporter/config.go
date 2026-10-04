@@ -28,6 +28,8 @@ type (
 		SlotPace                         time.Duration
 		ActiveIdentity                   string
 		EpochCleanupTime                 time.Duration
+		MonitorAlpenglowVoteInclusion    bool
+		AlpenglowReferenceCount          int
 	}
 )
 
@@ -55,9 +57,25 @@ func (c *ExporterConfig) validateLightModeFlags() error {
 		return errors.New("'-light-mode' is incompatible with '-votekey'")
 	case len(c.BalanceAddresses) > 0:
 		return errors.New("'-light-mode' is incompatible with '-balance-address'")
+	case c.MonitorAlpenglowVoteInclusion:
+		return errors.New("'-light-mode' is incompatible with '-monitor-alpenglow-vote-inclusion'")
 	default:
 		return nil
 	}
+}
+
+// validateAlpenglowFlags returns an error if Alpenglow vote-inclusion tracking is enabled without what it needs.
+func (c *ExporterConfig) validateAlpenglowFlags() error {
+	if !c.MonitorAlpenglowVoteInclusion {
+		return nil
+	}
+	if len(c.Nodekeys) == 0 && len(c.Votekeys) == 0 {
+		return errors.New("'-monitor-alpenglow-vote-inclusion' requires at least one '-nodekey' or '-votekey'")
+	}
+	if c.AlpenglowReferenceCount < 1 {
+		return errors.New("'-alpenglow-reference-count' must be at least 1")
+	}
+	return nil
 }
 
 func NewExporterConfig(
@@ -75,6 +93,8 @@ func NewExporterConfig(
 	slotPace time.Duration,
 	activeIdentity string,
 	epochCleanupTime time.Duration,
+	monitorAlpenglowVoteInclusion bool,
+	alpenglowReferenceCount int,
 ) (*ExporterConfig, error) {
 	logger := slog.Get()
 	logger.Infow(
@@ -92,6 +112,8 @@ func NewExporterConfig(
 		"activeIdentity", activeIdentity,
 		"slotPace", slotPace,
 		"epochCleanupTime", epochCleanupTime,
+		"monitorAlpenglowVoteInclusion", monitorAlpenglowVoteInclusion,
+		"alpenglowReferenceCount", alpenglowReferenceCount,
 	)
 	config := ExporterConfig{
 		HTTPTimeout:                      httpTimeout,
@@ -107,11 +129,16 @@ func NewExporterConfig(
 		SlotPace:                         slotPace,
 		ActiveIdentity:                   activeIdentity,
 		EpochCleanupTime:                 epochCleanupTime,
+		MonitorAlpenglowVoteInclusion:    monitorAlpenglowVoteInclusion,
+		AlpenglowReferenceCount:          alpenglowReferenceCount,
 	}
 	if lightMode {
 		if err := config.validateLightModeFlags(); err != nil {
 			return nil, err
 		}
+	}
+	if err := config.validateAlpenglowFlags(); err != nil {
+		return nil, err
 	}
 
 	// get votekeys from rpc (skip in light mode since nodekeys/votekeys are empty):
@@ -146,6 +173,8 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 		slotPace                         int
 		activeIdentity                   string
 		epochCleanupTime                 int
+		monitorAlpenglowVoteInclusion    bool
+		alpenglowReferenceCount          int
 	)
 	flag.IntVar(
 		&httpTimeout,
@@ -232,6 +261,19 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 		"Validator identity public key that determines if the node is considered active in the "+
 			"'solana_node_is_active' metric.",
 	)
+	flag.BoolVar(
+		&monitorAlpenglowVoteInclusion,
+		"monitor-alpenglow-vote-inclusion",
+		false,
+		"Set this flag to track in how many Alpenglow reward certificates the configured validators were included, "+
+			"derived from their vote credits.",
+	)
+	flag.IntVar(
+		&alpenglowReferenceCount,
+		"alpenglow-reference-count",
+		10,
+		"Number of top-staked validators used as references to estimate how many slots had a reward certificate.",
+	)
 	flag.Parse()
 
 	config, err := NewExporterConfig(
@@ -249,6 +291,8 @@ func NewExporterConfigFromCLI(ctx context.Context) (*ExporterConfig, error) {
 		time.Duration(slotPace)*time.Second,
 		activeIdentity,
 		time.Duration(epochCleanupTime)*time.Second,
+		monitorAlpenglowVoteInclusion,
+		alpenglowReferenceCount,
 	)
 	if err != nil {
 		return nil, err

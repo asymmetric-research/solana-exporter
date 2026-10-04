@@ -140,6 +140,35 @@ func GetAccountInfo[T any](
 	return &resp.Result.Value, nil
 }
 
+// GetMultipleAccounts returns the jsonParsed accounts of the provided pubkeys, in order, together with the slot
+// they were read at. All accounts are read from the same bank. Accounts that don't exist are returned as nil.
+// See API docs: https://solana.com/docs/rpc/http/getmultipleaccounts
+func GetMultipleAccounts[T any](
+	ctx context.Context, client *Client, commitment Commitment, addresses []string,
+) (int64, []*AccountInfo[T], error) {
+	var resp Response[contextualResult[[]*AccountInfo[T]]]
+	config := map[string]string{"commitment": string(commitment), "encoding": "jsonParsed"}
+	if err := getResponse(ctx, client, "getMultipleAccounts", []any{addresses, config}, &resp); err != nil {
+		return 0, nil, err
+	}
+	if len(resp.Result.Value) != len(addresses) {
+		return 0, nil, fmt.Errorf(
+			"getMultipleAccounts returned %d accounts for %d addresses", len(resp.Result.Value), len(addresses),
+		)
+	}
+	return resp.Result.Context.Slot, resp.Result.Value, nil
+}
+
+// GetEpochSchedule returns the epoch schedule from the cluster's genesis config.
+// See API docs: https://solana.com/docs/rpc/http/getepochschedule
+func (c *Client) GetEpochSchedule(ctx context.Context) (*EpochSchedule, error) {
+	var resp Response[EpochSchedule]
+	if err := getResponse(ctx, c, "getEpochSchedule", []any{}, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Result, nil
+}
+
 // GetEpochInfo returns information about the current epoch.
 // See API docs: https://solana.com/docs/rpc/http/getepochinfo
 func (c *Client) GetEpochInfo(ctx context.Context, commitment Commitment) (*EpochInfo, error) {

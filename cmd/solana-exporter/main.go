@@ -36,6 +36,10 @@ func main() {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 	go slotWatcher.WatchSlots(ctx)
+	if config.MonitorAlpenglowVoteInclusion {
+		voteInclusionWatcher := NewVoteInclusionWatcher(rpcClient, config)
+		go voteInclusionWatcher.WatchVoteInclusion(ctx)
+	}
 
 	prometheus.MustRegister(collector)
 	mux := http.NewServeMux()

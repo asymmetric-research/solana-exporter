@@ -29,6 +29,8 @@ func TestNewExporterConfig(t *testing.T) {
 		expectedNodekeys                 []string
 		expectedVotekeys                 []string
 		activeIdentity                   string
+		monitorAlpenglowVoteInclusion    bool
+		alpenglowReferenceCount          int
 	}{
 		{
 			name:                             "valid configuration",
@@ -106,6 +108,54 @@ func TestNewExporterConfig(t *testing.T) {
 			expectedVotekeys:                 []string{},
 			activeIdentity:                   "",
 		},
+		{
+			name:                          "alpenglow vote inclusion",
+			httpTimeout:                   60 * time.Second,
+			rpcURL:                        simulator.Server.URL(),
+			listenAddress:                 ":8080",
+			votekeys:                      simulator.Votekeys,
+			slotPace:                      time.Second,
+			epochCleanupTime:              60 * time.Second,
+			expectedNodekeys:              simulator.Nodekeys,
+			expectedVotekeys:              simulator.Votekeys,
+			monitorAlpenglowVoteInclusion: true,
+			alpenglowReferenceCount:       10,
+		},
+		{
+			name:                          "alpenglow vote inclusion without validators",
+			httpTimeout:                   60 * time.Second,
+			rpcURL:                        simulator.Server.URL(),
+			listenAddress:                 ":8080",
+			slotPace:                      time.Second,
+			epochCleanupTime:              60 * time.Second,
+			wantErr:                       true,
+			monitorAlpenglowVoteInclusion: true,
+			alpenglowReferenceCount:       10,
+		},
+		{
+			name:                          "alpenglow vote inclusion without references",
+			httpTimeout:                   60 * time.Second,
+			rpcURL:                        simulator.Server.URL(),
+			listenAddress:                 ":8080",
+			votekeys:                      simulator.Votekeys,
+			slotPace:                      time.Second,
+			epochCleanupTime:              60 * time.Second,
+			wantErr:                       true,
+			monitorAlpenglowVoteInclusion: true,
+			alpenglowReferenceCount:       0,
+		},
+		{
+			name:                          "alpenglow vote inclusion in light mode",
+			httpTimeout:                   60 * time.Second,
+			rpcURL:                        simulator.Server.URL(),
+			listenAddress:                 ":8080",
+			lightMode:                     true,
+			slotPace:                      time.Second,
+			epochCleanupTime:              60 * time.Second,
+			wantErr:                       true,
+			monitorAlpenglowVoteInclusion: true,
+			alpenglowReferenceCount:       10,
+		},
 	}
 
 	for _, tt := range tests {
@@ -125,6 +175,8 @@ func TestNewExporterConfig(t *testing.T) {
 				tt.slotPace,
 				tt.activeIdentity,
 				tt.epochCleanupTime,
+				tt.monitorAlpenglowVoteInclusion,
+				tt.alpenglowReferenceCount,
 			)
 
 			// Check error expectation
@@ -148,6 +200,8 @@ func TestNewExporterConfig(t *testing.T) {
 			assert.Equal(t, tt.slotPace, config.SlotPace)
 			assert.Equal(t, tt.epochCleanupTime, config.EpochCleanupTime)
 			assert.Equal(t, tt.monitorBlockSizes, config.MonitorBlockSizes)
+			assert.Equal(t, tt.monitorAlpenglowVoteInclusion, config.MonitorAlpenglowVoteInclusion)
+			assert.Equal(t, tt.alpenglowReferenceCount, config.AlpenglowReferenceCount)
 		})
 	}
 }
@@ -160,6 +214,7 @@ func TestValidateLightModeFlags(t *testing.T) {
 		comprehensiveSlotTracking        bool
 		comprehensiveVoteAccountTracking bool
 		monitorBlockSizes                bool
+		monitorAlpenglowVoteInclusion    bool
 		wantErr                          bool
 	}{
 		{name: "no incompatible flags"},
@@ -169,6 +224,7 @@ func TestValidateLightModeFlags(t *testing.T) {
 		{name: "nodekeys set", nodekeys: keys, wantErr: true},
 		{name: "votekeys set", votekeys: keys, wantErr: true},
 		{name: "balance addresses set", balanceAddrs: keys, wantErr: true},
+		{name: "alpenglow vote inclusion", monitorAlpenglowVoteInclusion: true, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -179,6 +235,7 @@ func TestValidateLightModeFlags(t *testing.T) {
 				ComprehensiveSlotTracking:        tt.comprehensiveSlotTracking,
 				ComprehensiveVoteAccountTracking: tt.comprehensiveVoteAccountTracking,
 				MonitorBlockSizes:                tt.monitorBlockSizes,
+				MonitorAlpenglowVoteInclusion:    tt.monitorAlpenglowVoteInclusion,
 				LightMode:                        true,
 			}
 			err := config.validateLightModeFlags()

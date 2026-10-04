@@ -66,6 +66,29 @@ This is particularly useful in setups that contain an important validator and ut
 run in light mode on the validator and in full capacity on the RPC node (configured to monitor the validator through 
 use of the `-nodekey` parameter).
 
+#### Alpenglow Vote Inclusion
+
+If the `-monitor-alpenglow-vote-inclusion` flag is set, the exporter tracks how many Alpenglow reward certificates 
+each monitored validator was included in. That makes it a real-time measure of vote performance on Alpenglow 
+clusters.
+
+Agave pays the reward for slot `S-8` while replaying block `S`, and only to the validators in that slot's reward 
+certificate. Within an epoch, each validator earns the same number of vote credits for every slot it is included in. 
+So the exporter reads the monitored vote accounts at `finalized` commitment every `-slot-pace`. A credit increase 
+divided by that per-slot amount is the number of reward slots the validator was included in. The per-slot amount is 
+learnt from the data each epoch. The vote accounts of the `-alpenglow-reference-count` top-staked validators are read 
+in the same call. The highest inclusion count among all of them is taken as the number of slots that had a reward 
+certificate; anything the monitored validator is short of that counts as missed. 
+
+Slot ranges containing the validator's own leader slots, or the first 8 slots of an epoch, cannot be attributed this 
+way. They are counted in `solana_validator_alpenglow_unattributed_slots_total` instead.
+
+Inclusion ratio over a window:
+```promql
+rate(solana_validator_alpenglow_reward_slots_total{status="included"}[10m])
+  / ignoring(status) sum without(status) (rate(solana_validator_alpenglow_reward_slots_total[10m]))
+```
+
 #### General Performance and Health
 
 In addition to the above features, the exporter provides key metrics for monitoring Solana node health and performance. 
@@ -103,11 +126,15 @@ The exporter is configured via the following command line arguments:
 | `-slot-pace`                           | This is the time (in seconds) between slot-watching metric collections                                                                                                                                                  | `1`                       |
 | `-active-identity`                     | Validator identity public key used to determine if the node is considered active in the `solana_node_is_active` metric.                                                                                                 | N/A                       |
 | `-epoch-cleanup-time`                  | The time to wait before cleaning old epoch metrics from the prometheus endpoint.                                                                                                                                        |                           |
+| `-monitor-alpenglow-vote-inclusion`    | Set this flag to track in how many Alpenglow reward certificates the configured validators were included.                                                                                                               | `false`                   |
+| `-alpenglow-reference-count`           | Number of top-staked validators used as references to estimate how many slots had a reward certificate.                                                                                                                 | `10`                      |
 
 ### Notes on Configuration
 
-* `-light-mode` is incompatible with `-nodekey`, `-balance-address`, `-monitor-block-sizes`, and 
-`-comprehensive-slot-tracking`, as these options control metrics which are not monitored in `-light-mode`.
+* `-light-mode` is incompatible with `-nodekey`, `-balance-address`, `-monitor-block-sizes`, 
+`-comprehensive-slot-tracking` and `-monitor-alpenglow-vote-inclusion`, as these options control metrics which are not 
+monitored in `-light-mode`.
+* `-monitor-alpenglow-vote-inclusion` requires at least one `-nodekey` or `-votekey`.
 * `-nodekey` and `-votekey` may, but need not, overlap. For instance, if you want to monitor a validator with 
 identity account `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` and vote account 
 `CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu`. The following are all valid configs:
@@ -162,6 +189,13 @@ The tables below describes all the metrics collected by the `solana-exporter`:
 | `solana_validator_block_size`                  | Number of transactions per block.                                                                                     | `nodekey`, `transaction_type` |
 | `solana_node_block_height`                     | The current block height of the node.                                                                                 | N/A                           |
 | `solana_node_is_active`                        | Whether the node is active and participating in consensus.                                                            | `identity`                    |
+| `solana_validator_alpenglow_reward_slots_total`         | Number of Alpenglow reward slots in which the validator was or was not in the reward certificate.            | `status`, `votekey`           |
+| `solana_validator_alpenglow_unattributed_slots_total`   | Number of slots that could not be counted towards reward-certificate inclusion.                              | `reason`, `votekey`           |
+| `solana_validator_alpenglow_last_included_slot`         | Upper bound of the latest slot range in which the validator was in a reward certificate.                     | `votekey`                     |
+| `solana_validator_alpenglow_credits_per_reward_slot`    | Vote credits earned per included reward slot in the current epoch (0 until learnt).                          | `votekey`                     |
+| `solana_alpenglow_observed_slot`                        | Finalized slot of the latest vote-credit observation.                                                        | N/A                           |
+| `solana_alpenglow_reference_validators`                 | Number of reference validators in use.                                                                       | N/A                           |
+| `solana_alpenglow_pending_gaps`                         | Number of observation gaps waiting for per-slot rewards to be learnt.                                        | N/A                           |
 
 #### Vote Account Metrics
 
@@ -187,6 +221,7 @@ The table below describes the various metric labels:
 | `address`          | Solana account address.                       | e.g., `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` |
 | `version`          | Solana node version.                          | e.g., `v1.18.23`                                     |
 | `state`            | Whether a validator is current or delinquent. | `current`, `delinquent`                              |
-| `status`           | Whether a slot was skipped or valid.          | `valid`, `skipped`                                   |
+| `status`           | Whether a slot was skipped or valid, or whether a validator was included in an Alpenglow reward certificate. | `valid`, `skipped`, `included`, `missed` |
+| `reason`           | Why slots could not be attributed to Alpenglow vote inclusion. | `leader`, `epoch_boundary`, `no_leader_schedule`, `rate_unknown`, `anomaly` |
 | `epoch`            | Solana epoch number.                          | e.g., `663`                                          |
 | `transaction_type` | General transaction type.                     | `vote`, `non_vote`                                   |
