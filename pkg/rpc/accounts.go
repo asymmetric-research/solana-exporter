@@ -21,8 +21,10 @@ type (
 	}
 
 	epochCredit struct {
-		Credits         string `json:"credits"`
-		Epoch           int64  `json:"epoch"`
+		Credits string `json:"credits"`
+		// Epoch is a u64: when a vote account migrates to Alpenglow, agave appends a marker entry
+		// (AG_MIGRATION_EPOCH_CREDIT) whose fields are all u64::MAX.
+		Epoch           uint64 `json:"epoch"`
 		PreviousCredits string `json:"previousCredits"`
 	}
 
