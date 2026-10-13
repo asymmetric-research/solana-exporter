@@ -146,6 +146,10 @@ func GetAssociatedValidatorAccounts(
 			if err != nil {
 				return nil, nil, err
 			}
+			// a nonexistent account returns a null value, which decodes without error into an empty struct:
+			if voteAccount.NodePubkey == "" {
+				return nil, nil, fmt.Errorf("vote account %v does not exist", inputVotekey)
+			}
 			// no error means it was a vote account, so we extract the identity account
 			associatedNodekey = voteAccount.NodePubkey
 		} else {
