@@ -59,6 +59,7 @@ type (
 		Delinquent bool
 		RootSlot   int
 		Commission int64
+		BlsPubkey  string
 	}
 )
 
@@ -260,6 +261,21 @@ func (s *MockServer) getResult(method string, params ...any) (any, *Error) {
 		return blockProduction, nil
 	}
 
+	if method == "getAccountInfo" && s.validatorInfos != nil {
+		if account := s.voteAccountInfo(params[0].(string)); account != nil {
+			return map[string]any{"context": map[string]int{"slot": 1}, "value": account}, nil
+		}
+	}
+
+	if method == "getMultipleAccounts" && s.validatorInfos != nil {
+		addresses := params[0].([]any)
+		accounts := make([]map[string]any, len(addresses))
+		for i, address := range addresses {
+			accounts[i] = s.voteAccountInfo(address.(string))
+		}
+		return map[string]any{"context": map[string]int{"slot": 1}, "value": accounts}, nil
+	}
+
 	if method == "getVoteAccounts" && s.validatorInfos != nil {
 		var currentVoteAccounts, delinquentVoteAccounts []map[string]any
 		for nodekey, info := range s.validatorInfos {
@@ -290,6 +306,44 @@ func (s *MockServer) getResult(method string, params ...any) (any, *Error) {
 		return nil, &Error{Code: -32601, Message: "Method not found"}
 	}
 	return result, nil
+}
+
+// voteAccountInfo returns the jsonParsed account info of the mock vote account with the given votekey.
+func (s *MockServer) voteAccountInfo(votekey string) map[string]any {
+	for nodekey, info := range s.validatorInfos {
+		if info.Votekey != votekey {
+			continue
+		}
+		var blsPubkey any
+		if info.BlsPubkey != "" {
+			blsPubkey = info.BlsPubkey
+		}
+		parsedInfo := map[string]any{
+			"authorizedVoters":     []any{},
+			"authorizedWithdrawer": nodekey,
+			"blsPubkeyCompressed":  blsPubkey,
+			"commission":           info.Commission,
+			"epochCredits":         []any{},
+			"lastTimestamp":        map[string]int{"slot": info.LastVote, "timestamp": 0},
+			"nodePubkey":           nodekey,
+			"priorVoters":          []any{},
+			"rootSlot":             info.RootSlot,
+			"votes":                []any{},
+		}
+		return map[string]any{
+			"data": map[string]any{
+				"parsed":  map[string]any{"info": parsedInfo, "type": "vote"},
+				"program": "vote",
+				"space":   3762,
+			},
+			"executable": false,
+			"lamports":   27074400,
+			"owner":      "Vote111111111111111111111111111111111111111",
+			"rentEpoch":  uint64(18446744073709551615),
+			"space":      3762,
+		}
+	}
+	return nil
 }
 
 func (s *MockServer) handleRPCRequest(w http.ResponseWriter, r *http.Request) {

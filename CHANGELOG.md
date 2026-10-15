@@ -1,3 +1,16 @@
+# v3.2.0
+
+## Key Changes
+
+Added BLS pubkey monitoring through the new `solana_validator_bls_pubkey_set` metric, so that validators can alert
+before SIMD-0357 validator admission drops a vote account without a BLS pubkey from the leader schedule.
+
+## What's Changed
+
+* Added the `solana_validator_bls_pubkey_set` metric, reporting whether each tracked vote account has a SIMD-0387 BLS
+  pubkey set (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
+* Added the `GetMultipleAccounts` RPC helper (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
+
 # v3.1.0
 
 ## Key Changes

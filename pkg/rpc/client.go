@@ -38,6 +38,8 @@ type (
 const (
 	// LamportsInSol is the number of lamports in 1 SOL (a billion).
 	LamportsInSol = 1_000_000_000
+	// MaxMultipleAccounts is the maximum number of addresses accepted by a single getMultipleAccounts call.
+	MaxMultipleAccounts = 100
 	// CommitmentFinalized level offers the highest level of certainty for a transaction on the Solana blockchain.
 	// A transaction is considered “Finalized” when it is included in a block that has been confirmed by a
 	// supermajority of the stake, and at least 31 additional confirmed blocks have been built on top of it.
@@ -138,6 +140,28 @@ func GetAccountInfo[T any](
 		*accountData = resp.Result.Value.Data.Parsed.Info
 	}
 	return &resp.Result.Value, nil
+}
+
+// GetMultipleAccounts returns the account information for a list of pubkeys.
+// See API docs: https://solana.com/docs/rpc/http/getmultipleaccounts
+func GetMultipleAccounts[T any](
+	ctx context.Context, client *Client, commitment Commitment, addresses []string,
+) ([]*AccountInfo[T], error) {
+	config := map[string]string{"commitment": string(commitment), "encoding": "jsonParsed"}
+	accounts := make([]*AccountInfo[T], 0, len(addresses))
+	for batch := range slices.Chunk(addresses, MaxMultipleAccounts) {
+		var resp Response[contextualResult[[]*AccountInfo[T]]]
+		if err := getResponse(ctx, client, "getMultipleAccounts", []any{batch, config}, &resp); err != nil {
+			return nil, err
+		}
+		if len(resp.Result.Value) != len(batch) {
+			return nil, fmt.Errorf(
+				"getMultipleAccounts returned %d accounts for %d addresses", len(resp.Result.Value), len(batch),
+			)
+		}
+		accounts = append(accounts, resp.Result.Value...)
+	}
+	return accounts, nil
 }
 
 // GetEpochInfo returns information about the current epoch.
