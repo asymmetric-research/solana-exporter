@@ -74,7 +74,7 @@ See [Metrics](#metrics) below for more details.
 ## Installation
 ### Build
 
-Assuming you already have [Go installed](https://go.dev/doc/install), the `solana-exporter` can be installed by 
+Assuming you already have [Go 1.27 or newer installed](https://go.dev/doc/install), the `solana-exporter` can be installed by 
 cloning this repository and building the binary:
 
 ```shell

@@ -34,7 +34,7 @@ linters:
     - goconst # finds repeated strings that could be replaced by a constant
     - gocritic # provides diagnostics that check for bugs, performance and style issues
     - godot # checks if comments end in a period
-    - gomodguard # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
+    - gomodguard_v2 # allow and block lists linter for direct Go module dependencies. This is different from depguard where there are different block types for example version constraints and module recommendations
     - goprintffuncname # checks that printf-like functions are named with f at the end
     - gosec # inspects source code for security problems
     - govet # reports suspicious constructs, such as Printf calls whose arguments do not align with the format string
@@ -162,23 +162,27 @@ linters:
       excludes:
         - G404 # math/rand/v2 is fine for non-security uses
 
-    gomodguard:
+    goconst:
+      # JSON-RPC request config keys mirror the wire API; inline literals read better than constants.
+      ignore-string-values:
+        - ^(commitment|encoding)$
+
+    gomodguard_v2:
+      # List of blocked modules.
+      # Default: []
       blocked:
-        # List of blocked modules.
-        # Default: []
-        modules:
-          - github.com/golang/protobuf:
-              recommendations:
-                - google.golang.org/protobuf
-              reason: see https://developers.google.com/protocol-buffers/docs/reference/go/faq#modules
-          - github.com/satori/go.uuid:
-              recommendations:
-                - github.com/google/uuid
-              reason: satori's package is not maintained
-          - github.com/gofrs/uuid:
-              recommendations:
-                - github.com/gofrs/uuid/v5
-              reason: gofrs' package was not go module before v5
+        - module: github.com/golang/protobuf
+          recommendations:
+            - google.golang.org/protobuf
+          reason: see https://developers.google.com/protocol-buffers/docs/reference/go/faq#modules
+        - module: github.com/satori/go.uuid
+          recommendations:
+            - github.com/google/uuid
+          reason: satori's package is not maintained
+        - module: github.com/gofrs/uuid
+          recommendations:
+            - github.com/gofrs/uuid/v5
+          reason: gofrs' package was not go module before v5
 
     govet:
       # Disable analyzers by name.

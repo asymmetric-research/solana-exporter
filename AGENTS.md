@@ -6,7 +6,7 @@ This file provides guidance to agents when working with code in this repository.
 
 `solana-exporter` is a Prometheus exporter that scrapes monitoring data from a Solana node via the
 [Solana JSON-RPC API](https://solana.com/docs/rpc). It runs as a single Go binary that exposes a `/metrics` endpoint.
-Go 1.25, no CGO.
+Go 1.27, no CGO.
 
 ## Commands
 

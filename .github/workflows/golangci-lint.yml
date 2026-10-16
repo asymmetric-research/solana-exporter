@@ -83,5 +83,5 @@ jobs:
           #   go tool -modfile=tools/go.mod golangci-lint version
           # And update it with:
           #   cd tools && go get -tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.10.1
-          version: v2.10.1
+          version: v2.14.0
           only-new-issues: true
