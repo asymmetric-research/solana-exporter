@@ -95,7 +95,6 @@ adding/changing flags:
 - Label constants (`NodekeyLabel`, `EpochLabel`, `StatusValid`, etc.) live at the top of `collector.go` — reuse them
   rather than string literals.
 - Logging is via `pkg/slog` (a zap wrapper); get the logger with `slog.Get()`.
-- `mj_utils.go` files contain `prettyPrint` debugging helpers — not for production paths.
 - `cmd/playground` is a scratch main for manual RPC experimentation, not part of the exporter.
 
 ## Example run
