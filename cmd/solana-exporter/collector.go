@@ -57,6 +57,7 @@ type SolanaCollector struct {
 	NodeIdentity            *GaugeDesc
 	NodeIsActive            *GaugeDesc
 	ValidatorCommission     *GaugeDesc
+	ValidatorBlsPubkeySet   *GaugeDesc
 }
 
 func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCollector {
@@ -145,6 +146,14 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 			fmt.Sprintf("Validator commission, as a percentage (represented by %s and %s)", VotekeyLabel, NodekeyLabel),
 			VotekeyLabel, NodekeyLabel,
 		),
+		ValidatorBlsPubkeySet: NewGaugeDesc(
+			"solana_validator_bls_pubkey_set",
+			fmt.Sprintf(
+				"Whether the validator's vote account has a BLS pubkey set (represented by %s and %s)",
+				VotekeyLabel, NodekeyLabel,
+			),
+			VotekeyLabel, NodekeyLabel,
+		),
 	}
 	return collector
 }
@@ -167,6 +176,7 @@ func (c *SolanaCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.NodeFirstAvailableBlock.Desc
 	ch <- c.NodeIsActive.Desc
 	ch <- c.ValidatorCommission.Desc
+	ch <- c.ValidatorBlsPubkeySet.Desc
 }
 
 func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- prometheus.Metric) {
@@ -234,6 +244,40 @@ func (c *SolanaCollector) collectVoteAccounts(ctx context.Context, ch chan<- pro
 	ch <- c.ClusterValidatorCount.MustNewConstMetric(float64(len(voteAccounts.Delinquent)), StateDelinquent)
 
 	c.logger.Info("Vote accounts collected.")
+}
+
+func (c *SolanaCollector) collectBlsPubkeys(ctx context.Context, ch chan<- prometheus.Metric) {
+	if c.config.LightMode {
+		c.logger.Debug("Skipping BLS pubkey collection in light mode.")
+		return
+	}
+	if len(c.config.Votekeys) == 0 {
+		return
+	}
+	c.logger.Info("Collecting BLS pubkeys...")
+	accounts, err := rpc.GetMultipleAccounts[rpc.VoteAccountData](
+		ctx, c.rpcClient, rpc.CommitmentConfirmed, c.config.Votekeys,
+	)
+	if err != nil {
+		c.logger.Errorf("failed to get vote account data: %v", err)
+		ch <- c.ValidatorBlsPubkeySet.NewInvalidMetric(err)
+		return
+	}
+
+	for i, account := range accounts {
+		votekey, nodekey := c.config.Votekeys[i], c.config.Nodekeys[i]
+		if account == nil {
+			c.logger.Warnf("vote account %s not found, skipping BLS pubkey metric", votekey)
+			continue
+		}
+		var blsPubkeySet float64
+		if account.Data.Parsed.Info.BlsPubkeyCompressed != nil {
+			blsPubkeySet = 1
+		}
+		ch <- c.ValidatorBlsPubkeySet.MustNewConstMetric(blsPubkeySet, votekey, nodekey)
+	}
+
+	c.logger.Info("BLS pubkeys collected.")
 }
 
 func (c *SolanaCollector) collectVersion(ctx context.Context, ch chan<- prometheus.Metric) {
@@ -357,6 +401,7 @@ func (c *SolanaCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collectMinimumLedgerSlot(ctx, ch)
 	c.collectFirstAvailableBlock(ctx, ch)
 	c.collectVoteAccounts(ctx, ch)
+	c.collectBlsPubkeys(ctx, ch)
 	c.collectVersion(ctx, ch)
 	c.collectIdentity(ctx, ch)
 	c.collectBalances(ctx, ch)

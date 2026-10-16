@@ -142,6 +142,7 @@ The tables below describes all the metrics collected by the `solana-exporter`:
 | `solana_cluster_root_slot`                     | Max root slot of the cluster.                                                                                         | N/A                           |
 | `solana_validator_delinquent`                  | Whether a validator is delinquent.                                                                                    | `votekey`, `nodekey`          |
 | `solana_validator_commission`                  | Validator commission, as a percentage.                                                                                | `votekey`, `nodekey`          |
+| `solana_validator_bls_pubkey_set`              | Whether the validator's vote account has a BLS pubkey set (SIMD-0387).                                                | `votekey`, `nodekey`          |
 | `solana_cluster_validator_count`               | Total number of validators in the cluster.                                                                            | `state`                       |
 | `solana_account_balance`                       | Solana account balances.                                                                                              | `address`                     |
 | `solana_node_version`                          | Node version of solana.                                                                                               | `version`                     |
@@ -175,6 +176,12 @@ The following metrics are all received from the `getVoteAccounts` [RPC endpoint]
 ***NOTE***: If `-comprehensive-vote-account-tracking` is configured, then these metrics are tracked for **all** network
 validators. Regardless of comprehensive tracking, the above metrics' cluster counterparts are always tracked for easy 
 cluster-level comparison.
+
+`solana_validator_bls_pubkey_set` is the exception: the BLS pubkey is not part of the `getVoteAccounts` response, so it
+is read from the parsed vote account data via the `getMultipleAccounts`
+[RPC endpoint](https://solana.com/docs/rpc/http/getmultipleaccounts). It is only tracked for the configured
+validators (`-nodekey`'s or `-votekey`'s), regardless of `-comprehensive-vote-account-tracking`. A value of `0` means
+the vote account has no BLS pubkey, which under SIMD-0357 validator admission excludes it from the leader schedule.
 
 ### Labels
 

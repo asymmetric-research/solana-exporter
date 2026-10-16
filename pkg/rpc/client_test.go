@@ -115,6 +115,7 @@ func TestClient_GetAccountInfo(t *testing.T) {
 								},
 							},
 							"authorizedWithdrawer": "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
+							"blsPubkeyCompressed":  "2gK9aBLSpubkeyCompressedFixtureXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 							"commission":           100,
 							"epochCredits": []map[string]any{
 								{
@@ -163,11 +164,13 @@ func TestClient_GetAccountInfo(t *testing.T) {
 		ctx, client, CommitmentFinalized, "CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu", &voteAccountData,
 	)
 	require.NoError(t, err)
+	blsPubkey := "2gK9aBLSpubkeyCompressedFixtureXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
 	expectedData := VoteAccountData{
 		AuthorizedVoters: []authorizedVoter{
 			{"Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24", 761},
 		},
 		AuthorizedWithdrawer: "7tP8ko6zKSXsJnUzPKsAwqukaGsgjr7cHQWzzxLQi7Gd",
+		BlsPubkeyCompressed:  &blsPubkey,
 		Commission:           100,
 		EpochCredits: []epochCredit{
 			{"574047", 761, "0"},
@@ -207,6 +210,89 @@ func TestClient_GetAccountInfo(t *testing.T) {
 		accountInfo,
 	)
 	assert.Equal(t, expectedData, voteAccountData)
+}
+
+func TestClient_GetMultipleAccounts(t *testing.T) {
+	voteAccount := func(nodekey string, blsPubkey any) map[string]any {
+		return map[string]any{
+			"data": map[string]any{
+				"parsed": map[string]any{
+					"info": map[string]any{
+						"authorizedVoters":     []any{},
+						"authorizedWithdrawer": nodekey,
+						"blsPubkeyCompressed":  blsPubkey,
+						"commission":           10,
+						"epochCredits": []map[string]any{
+							{"credits": "1", "epoch": uint64(18446744073709551615), "previousCredits": "0"},
+						},
+						"lastTimestamp": map[string]int{"slot": 1, "timestamp": 2},
+						"nodePubkey":    nodekey,
+						"priorVoters":   []any{},
+						"rootSlot":      3,
+						"votes":         []any{},
+					},
+					"type": "vote",
+				},
+				"program": "vote",
+				"space":   3762,
+			},
+			"executable": false,
+			"lamports":   27074400,
+			"owner":      "Vote111111111111111111111111111111111111111",
+			"rentEpoch":  uint64(18446744073709551615),
+			"space":      3762,
+		}
+	}
+	_, client := newMethodTester(t,
+		"getMultipleAccounts",
+		map[string]any{
+			"context": map[string]any{"apiVersion": "2.2.14", "slot": 343274370},
+			"value":   []any{voteAccount("aaa", "blsAAA"), nil, voteAccount("ccc", nil)},
+		},
+		nil,
+	)
+	ctx := t.Context()
+
+	accounts, err := GetMultipleAccounts[VoteAccountData](ctx, client, CommitmentFinalized, []string{"AAA", "BBB", "CCC"})
+	require.NoError(t, err)
+	require.Len(t, accounts, 3)
+
+	blsPubkey := "blsAAA"
+	expected := func(nodekey string, blsPubkey *string) *AccountInfo[VoteAccountData] {
+		return &AccountInfo[VoteAccountData]{
+			Data: accountInfoData[VoteAccountData]{
+				Parsed: accountInfoParsedData[VoteAccountData]{
+					Info: VoteAccountData{
+						AuthorizedVoters:     []authorizedVoter{},
+						AuthorizedWithdrawer: nodekey,
+						BlsPubkeyCompressed:  blsPubkey,
+						Commission:           10,
+						EpochCredits:         []epochCredit{{"1", 18446744073709551615, "0"}},
+						LastTimestamp:        lastTimestamp{1, 2},
+						NodePubkey:           nodekey,
+						PriorVoters:          []string{},
+						RootSlot:             3,
+						Votes:                []vote{},
+					},
+					Type: "vote",
+				},
+				Program: "vote",
+				Space:   3762,
+			},
+			Executable: false,
+			Lamports:   27074400,
+			Owner:      "Vote111111111111111111111111111111111111111",
+			RentEpoch:  uint64(18446744073709551615),
+			Space:      3762,
+		}
+	}
+	assert.Equal(t, expected("aaa", &blsPubkey), accounts[0])
+	assert.Nil(t, accounts[1])
+	assert.Equal(t, expected("ccc", nil), accounts[2])
+
+	// a length mismatch between the request and the response is an error:
+	_, err = GetMultipleAccounts[VoteAccountData](ctx, client, CommitmentFinalized, []string{"AAA"})
+	require.Error(t, err)
 }
 
 func TestClient_GetEpochInfo(t *testing.T) {

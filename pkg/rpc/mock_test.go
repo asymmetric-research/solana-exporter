@@ -126,3 +126,33 @@ func TestMockServer_getVoteAccounts(t *testing.T) {
 		*voteAccounts,
 	)
 }
+
+func TestMockServer_getMultipleAccounts(t *testing.T) {
+	_, client := NewMockClient(t, MockConfig{
+		ValidatorInfos: map[string]MockValidatorInfo{
+			"aaa": {Votekey: "AAA", RootSlot: 10, Commission: 11, BlsPubkey: "blsAAA"},
+			"bbb": {Votekey: "BBB", RootSlot: 11, Commission: 12},
+		},
+	})
+	ctx := t.Context()
+
+	// getMultipleAccounts returns index-aligned results, with nil for unknown accounts:
+	accounts, err := GetMultipleAccounts[VoteAccountData](ctx, client, CommitmentFinalized, []string{"AAA", "XXX", "BBB"})
+	require.NoError(t, err)
+	require.Len(t, accounts, 3)
+	require.NotNil(t, accounts[0])
+	require.NotNil(t, accounts[0].Data.Parsed.Info.BlsPubkeyCompressed)
+	assert.Equal(t, "blsAAA", *accounts[0].Data.Parsed.Info.BlsPubkeyCompressed)
+	assert.Equal(t, "aaa", accounts[0].Data.Parsed.Info.NodePubkey)
+	assert.Nil(t, accounts[1])
+	require.NotNil(t, accounts[2])
+	assert.Nil(t, accounts[2].Data.Parsed.Info.BlsPubkeyCompressed)
+	assert.Equal(t, int64(12), accounts[2].Data.Parsed.Info.Commission)
+
+	// getAccountInfo serves the same vote account shape:
+	var voteAccountData VoteAccountData
+	_, err = GetAccountInfo(ctx, client, CommitmentFinalized, "BBB", &voteAccountData)
+	require.NoError(t, err)
+	assert.Equal(t, "bbb", voteAccountData.NodePubkey)
+	assert.Nil(t, voteAccountData.BlsPubkeyCompressed)
+}
