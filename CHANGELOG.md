@@ -2,11 +2,14 @@
 
 ## Key Changes
 
-Added BLS pubkey monitoring through the new `solana_validator_bls_pubkey_set` metric, so that validators can alert
-before SIMD-0357 validator admission drops a vote account without a BLS pubkey from the leader schedule.
+Added support for Alpenglow clusters, fixing a decoding failure on vote accounts migrated to Alpenglow, and added BLS
+pubkey monitoring through the new `solana_validator_bls_pubkey_set` metric, so that validators can alert before
+SIMD-0357 validator admission drops a vote account without a BLS pubkey from the leader schedule.
 
 ## What's Changed
 
+* Fixed decoding of vote accounts migrated to Alpenglow, whose `u64::MAX` `epochCredits` migration marker previously
+  broke `-votekey` resolution for unstaked validators (**[@kernelpanic9](https://github.com/kernelpanic9)**).
 * Added the `solana_validator_bls_pubkey_set` metric, reporting whether each tracked vote account has a SIMD-0387 BLS
   pubkey set (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
 * Added the `GetMultipleAccounts` RPC helper (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
@@ -14,6 +17,11 @@ before SIMD-0357 validator admission drops a vote account without a BLS pubkey f
   started fine, now fails config validation (**[@johnstonematt](https://github.com/johnstonematt)**).
 * Rejected a `-votekey` that is not an existing vote account at startup, instead of silently pairing it with an empty
   nodekey (**[@johnstonematt](https://github.com/johnstonematt)**).
+
+## New Contributors
+
+* **[@kernelpanic9](https://github.com/kernelpanic9)** made their first contribution in
+  **[#110](https://github.com/asymmetric-research/solana-exporter/pull/110)**.
 
 # v3.1.0
 
