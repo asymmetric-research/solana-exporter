@@ -199,3 +199,7 @@ The table below describes the various metric labels:
 | `status`           | Whether a slot was skipped or valid.          | `valid`, `skipped`                                   |
 | `epoch`            | Solana epoch number.                          | e.g., `663`                                          |
 | `transaction_type` | General transaction type.                     | `vote`, `non_vote`                                   |
+
+## Contributing
+
+Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or PR.
