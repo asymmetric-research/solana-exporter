@@ -10,6 +10,10 @@ before SIMD-0357 validator admission drops a vote account without a BLS pubkey f
 * Added the `solana_validator_bls_pubkey_set` metric, reporting whether each tracked vote account has a SIMD-0387 BLS
   pubkey set (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
 * Added the `GetMultipleAccounts` RPC helper (**[@jemiller-jumptrading](https://github.com/jemiller-jumptrading)**).
+* Rejected duplicate `-nodekey` and `-votekey` values at startup. Note that a repeated `-nodekey`, which previously
+  started fine, now fails config validation (**[@johnstonematt](https://github.com/johnstonematt)**).
+* Rejected a `-votekey` that is not an existing vote account at startup, instead of silently pairing it with an empty
+  nodekey (**[@johnstonematt](https://github.com/johnstonematt)**).
 
 # v3.1.0
 

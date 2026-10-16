@@ -121,6 +121,8 @@ identity account `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` and vote account
 ```
 * To monitor an unstaked validator, you **_must_** (at least) specify the validators vote account with the 
 `-votekey` parameter.
+* Keys are validated at startup, and the exporter refuses to start if the same value is passed more than once to
+`-nodekey` or `-votekey`, or if a `-votekey` is not an existing vote account.
 * ***WARNING***:
   * Configuring `-comprehensive-slot-tracking` will lead to potentially thousands of new Prometheus metrics being 
   created every epoch.
