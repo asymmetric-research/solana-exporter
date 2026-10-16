@@ -294,8 +294,6 @@ linters:
     paths:
       # Scratch main for manual RPC experimentation, not part of the exporter.
       - cmd/playground
-      # prettyPrint debugging helpers, not used in production paths.
-      - mj_utils\.go
 
 issues:
   # Maximum count of issues with the same text.
