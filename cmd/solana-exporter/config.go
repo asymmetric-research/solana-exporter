@@ -40,6 +40,21 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+// validateUniqueKeys returns an error if the same value was passed more than once to '-nodekey' or '-votekey'.
+// Every tracked key must map to exactly one Prometheus label set, and a duplicate would produce duplicate series.
+func (c *ExporterConfig) validateUniqueKeys() error {
+	for flagName, keys := range map[string][]string{"-nodekey": c.Nodekeys, "-votekey": c.Votekeys} {
+		seen := make(map[string]struct{}, len(keys))
+		for _, key := range keys {
+			if _, ok := seen[key]; ok {
+				return fmt.Errorf("'%s' was passed more than once with the value %q", flagName, key)
+			}
+			seen[key] = struct{}{}
+		}
+	}
+	return nil
+}
+
 // validateLightModeFlags returns an error if any flag that is incompatible with light mode is set.
 func (c *ExporterConfig) validateLightModeFlags() error {
 	switch {
@@ -107,6 +122,9 @@ func NewExporterConfig(
 		SlotPace:                         slotPace,
 		ActiveIdentity:                   activeIdentity,
 		EpochCleanupTime:                 epochCleanupTime,
+	}
+	if err := config.validateUniqueKeys(); err != nil {
+		return nil, err
 	}
 	if lightMode {
 		if err := config.validateLightModeFlags(); err != nil {

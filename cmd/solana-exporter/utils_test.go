@@ -99,6 +99,13 @@ func TestGetAssociatedValidatorAccounts(t *testing.T) {
 	sort.Strings(votekeys)
 	assert.Equal(t, simulator.Votekeys, votekeys)
 	assert.Equal(t, simulator.Nodekeys, nodekeys)
+
+	// test that a votekey which is not staked and does not exist (getAccountInfo returns a null value) is rejected:
+	simulator.Server.SetOpt(
+		rpc.EasyResultsOpt, "getAccountInfo", map[string]any{"context": map[string]int{"slot": 1}, "value": nil},
+	)
+	_, _, err = GetAssociatedValidatorAccounts(ctx, client, rpc.CommitmentFinalized, nil, []string{"nonexistent"})
+	assert.ErrorContains(t, err, "vote account nonexistent does not exist")
 }
 
 func TestGetEpochBounds(t *testing.T) {

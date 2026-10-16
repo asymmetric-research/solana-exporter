@@ -88,6 +88,25 @@ func TestNewExporterConfig(t *testing.T) {
 			activeIdentity:                   simulator.Nodekeys[0],
 		},
 		{
+			name:                             "duplicate votekeys",
+			httpTimeout:                      60 * time.Second,
+			rpcURL:                           simulator.Server.URL(),
+			listenAddress:                    ":8080",
+			nodekeys:                         []string{},
+			votekeys:                         []string{simulator.Votekeys[0], simulator.Votekeys[0]},
+			balanceAddresses:                 []string{},
+			comprehensiveSlotTracking:        false,
+			comprehensiveVoteAccountTracking: false,
+			monitorBlockSizes:                false,
+			lightMode:                        false,
+			slotPace:                         time.Second,
+			epochCleanupTime:                 60 * time.Second,
+			wantErr:                          true,
+			expectedNodekeys:                 nil,
+			expectedVotekeys:                 nil,
+			activeIdentity:                   simulator.Nodekeys[0],
+		},
+		{
 			name:                             "valid light mode configuration",
 			httpTimeout:                      60 * time.Second,
 			rpcURL:                           "http://invalid-rpc:9999",
@@ -148,6 +167,31 @@ func TestNewExporterConfig(t *testing.T) {
 			assert.Equal(t, tt.slotPace, config.SlotPace)
 			assert.Equal(t, tt.epochCleanupTime, config.EpochCleanupTime)
 			assert.Equal(t, tt.monitorBlockSizes, config.MonitorBlockSizes)
+		})
+	}
+}
+
+func TestValidateUniqueKeys(t *testing.T) {
+	tests := []struct {
+		name               string
+		nodekeys, votekeys []string
+		wantErr            bool
+	}{
+		{name: "no keys"},
+		{name: "unique keys", nodekeys: []string{"aaa", "bbb"}, votekeys: []string{"AAA", "BBB"}},
+		{name: "same key in both flags", nodekeys: []string{"aaa"}, votekeys: []string{"aaa"}},
+		{name: "duplicate nodekey", nodekeys: []string{"aaa", "bbb", "aaa"}, wantErr: true},
+		{name: "duplicate votekey", votekeys: []string{"AAA", "AAA"}, wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := ExporterConfig{Nodekeys: tt.nodekeys, Votekeys: tt.votekeys}
+			err := config.validateUniqueKeys()
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
 		})
 	}
 }
