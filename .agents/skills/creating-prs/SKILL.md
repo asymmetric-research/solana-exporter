@@ -39,8 +39,8 @@ Read each candidate issue before linking it. Under "Linked Issues":
 - `Related to #N` when the PR addresses only part of the issue, or is connected to it without resolving it.
 
 Only link an issue you are **highly confident** is relevant. If you cannot find a clear match — or you find
-several plausible ones and cannot tell which applies — leave the "Linked Issues" section with a default "N/A" and flag 
-this to the dev in your output. A wrong link (especially a wrong `Closes`, which closes an unrelated issue) is worse 
+several plausible ones and cannot tell which applies — leave the "Linked Issues" section with a default "N/A" and flag
+this to the dev in your output. A wrong link (especially a wrong `Closes`, which closes an unrelated issue) is worse
 than no link; a human can add the correct one.
 
 ## Writing the Description
@@ -57,13 +57,16 @@ PR adds or changes a metric, label, or flag, name it — operators read these PR
 **Do not state that tests pass** (or that you added/ran tests, linting, gofmt, etc.). The CI workflows on each PR
 verify that; asserting it in the description is noise.
 
+**Do not hard-wrap the body.** GitHub renders every newline in a PR description as a line break, so keep each
+paragraph and list item on one line. This overrides the line-width rule in `writing-markdown`, which is for files in
+the repo; its other conventions still apply.
+
 Good:
 
 ```markdown
 ## Description
 
-Adds a `solana_validator_bls_pubkey_set` gauge reporting whether each tracked vote account has a BLS public key
-registered, so operators can confirm Alpenglow readiness.
+Adds a `solana_validator_bls_pubkey_set` gauge reporting whether each tracked vote account has a BLS public key registered, so operators can confirm Alpenglow readiness.
 ```
 
 Bad (verbose, narrates the diff, claims tests pass):
@@ -71,9 +74,7 @@ Bad (verbose, narrates the diff, claims tests pass):
 ```markdown
 ## Description
 
-This PR modifies collector.go by adding a new GaugeDesc field. First it fetches the vote accounts, then for each
-one it checks the BLS key and emits a metric. I also updated the README and added three test cases which all
-pass locally and in CI.
+This PR modifies collector.go by adding a new GaugeDesc field. First it fetches the vote accounts, then for each one it checks the BLS key and emits a metric. I also updated the README and added three test cases which all pass locally and in CI.
 ```
 
 ## Title
@@ -100,4 +101,4 @@ Use Conventional Commits — `type(scope): summary`, e.g. `feat: add solana_vali
 
 - **Assign the PR to its opener** so they can track it: pass `--assignee @me` to `gh pr create` (or
   `gh pr edit <number> --add-assignee @me` after the fact).
-- **Request a review from the Asymmetric Research `swe` team if it has access to the repo.** 
+- **Request a review from the Asymmetric Research `swe` team if it has access to the repo.**
