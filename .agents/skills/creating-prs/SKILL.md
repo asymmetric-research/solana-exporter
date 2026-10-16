@@ -100,8 +100,4 @@ Use Conventional Commits — `type(scope): summary`, e.g. `feat: add solana_vali
 
 - **Assign the PR to its opener** so they can track it: pass `--assignee @me` to `gh pr create` (or
   `gh pr edit <number> --add-assignee @me` after the fact).
-- **Request a review from the `swe` team if it has access to the repo.** Check with
-  `gh api "repos/{owner}/{repo}/teams" --jq '.[].slug'` and look for `swe` in the output. If it is present,
-  request the review with `gh pr edit <number> --add-reviewer asymmetric-research/swe` (or pass
-  `--reviewer asymmetric-research/swe` to `gh pr create`). If the team is not listed, or the call fails because
-  you lack permission to list the repo's teams (e.g. you are an outside contributor), skip this step.
+- **Request a review from the Asymmetric Research `swe` team if it has access to the repo.** 
