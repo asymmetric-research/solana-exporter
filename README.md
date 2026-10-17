@@ -74,7 +74,7 @@ See [Metrics](#metrics) below for more details.
 ## Installation
 ### Build
 
-Assuming you already have [Go installed](https://go.dev/doc/install), the `solana-exporter` can be installed by 
+Assuming you already have [Go 1.27 or newer installed](https://go.dev/doc/install), the `solana-exporter` can be installed by 
 cloning this repository and building the binary:
 
 ```shell
@@ -199,3 +199,7 @@ The table below describes the various metric labels:
 | `status`           | Whether a slot was skipped or valid.          | `valid`, `skipped`                                   |
 | `epoch`            | Solana epoch number.                          | e.g., `663`                                          |
 | `transaction_type` | General transaction type.                     | `vote`, `non_vote`                                   |
+
+## Contributing
+
+Contributions are welcome! Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening an issue or PR.

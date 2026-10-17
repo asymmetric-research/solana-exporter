@@ -110,10 +110,9 @@ and sorted.
 
 ## Project-Specific
 
-- Go 1.22, `CGO_ENABLED=0`. No new CGO dependencies.
+- Go 1.27, `CGO_ENABLED=0`. No new CGO dependencies.
 - Logging goes through `pkg/slog` (zap wrapper): `slog.Get()`. Don't use the standard `log` package or `fmt.Println`
   in production paths.
-- `mj_utils.go` / `prettyPrint` helpers are debug-only — never in production code paths.
 - Keep the README metrics/labels/flags tables in sync when adding metrics or flags (see AGENTS.md).
 
 ## Quick Checklist

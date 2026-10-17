@@ -16,6 +16,11 @@ Hard-wrap prose at **120 characters**. This applies to paragraphs, list items, a
 - Table rows (align columns instead — see below)
 - Headings (keep on one line)
 
+This applies to markdown **files** in the repo. Text posted to GitHub — PR descriptions, issue bodies, comments —
+renders every newline as a line break, so do not hard-wrap it: keep each paragraph and list item on a single line,
+even when drafting it in a temporary `.md` file (e.g. for `gh pr create --body-file`). The other conventions below
+still apply.
+
 ## Tables
 
 Pad every cell so that columns are visually aligned in the raw source. Use dashes and colons in the separator row to

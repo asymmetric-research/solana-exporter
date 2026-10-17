@@ -98,8 +98,7 @@ func getResponse[T any](
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	// The RPC URL is operator-configured, not attacker-controlled, so this is not an SSRF vector.
-	resp, err := client.HTTPClient.Do(req) //nolint:gosec // G704: RPC URL is operator-configured
+	resp, err := client.HTTPClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("%s rpc call failed: %w", method, err)
 	}
