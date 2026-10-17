@@ -1,0 +1,38 @@
+version: 2
+
+before:
+  hooks:
+    - go mod verify
+
+builds:
+  - id: solana-exporter
+    main: ./cmd/solana-exporter
+    binary: solana-exporter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: solana-exporter
+    formats: [tar.gz]
+    name_template: >-
+      {{ .Binary }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^ci:"
+
+release:
+  make_latest: true
