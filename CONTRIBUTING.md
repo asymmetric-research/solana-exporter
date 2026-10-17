@@ -27,6 +27,7 @@ Contributions should follow the conventions documented in this repo:
   - [`go-standards`](.agents/skills/go-standards/SKILL.md) — idiomatic Go conventions.
   - [`writing-markdown`](.agents/skills/writing-markdown/SKILL.md) — markdown formatting.
   - [`creating-prs`](.agents/skills/creating-prs/SKILL.md) — PR titles (Conventional Commits) and descriptions.
+  - [`e2e-testing`](.agents/skills/e2e-testing/SKILL.md) — running against mainnet and sanity-checking the metrics.
 - [`README.md`](README.md) — keep the flag, metric, and label tables in sync when you add or change any of them.
 
 Where possible, add unit tests for your change. Prefer extending the in-process RPC mock (`pkg/rpc/mock.go`) over
