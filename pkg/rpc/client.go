@@ -210,6 +210,16 @@ func (c *Client) GetIdentity(ctx context.Context) (string, error) {
 	return resp.Result.Identity, nil
 }
 
+// GetClusterNodes returns all gossip nodes, including the node itself.
+// See API docs: https://solana.com/docs/rpc/http/getclusternodes
+func (c *Client) GetClusterNodes(ctx context.Context) ([]ClusterNode, error) {
+	var resp Response[[]ClusterNode]
+	if err := getResponse(ctx, c, "getClusterNodes", []any{}, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Result, nil
+}
+
 // GetSlot returns the slot that has reached the given or default commitment level.
 // See API docs: https://solana.com/docs/rpc/http/getslot
 func (c *Client) GetSlot(ctx context.Context, commitment Commitment) (int64, error) {

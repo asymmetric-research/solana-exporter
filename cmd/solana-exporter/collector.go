@@ -5,6 +5,8 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"sync"
+	"time"
 
 	"github.com/asymmetric-research/solana-exporter/pkg/rpc"
 	"github.com/asymmetric-research/solana-exporter/pkg/slog"
@@ -19,6 +21,7 @@ const (
 	VotekeyLabel         = "votekey"
 	VersionLabel         = "version"
 	IdentityLabel        = "identity"
+	ClientLabel          = "client"
 	AddressLabel         = "address"
 	EpochLabel           = "epoch"
 	TransactionTypeLabel = "transaction_type"
@@ -31,6 +34,11 @@ const (
 
 	TransactionTypeVote    = "vote"
 	TransactionTypeNonVote = "non_vote"
+
+	// clientInfoRefreshInterval is how long a client name stays cached. getClusterNodes is large (~1.5 MB on mainnet).
+	clientInfoRefreshInterval = 10 * time.Minute
+	// clientInfoRetryInterval is how long to wait before a new lookup after one that failed.
+	clientInfoRetryInterval = time.Minute
 )
 
 type SolanaCollector struct {
@@ -38,6 +46,15 @@ type SolanaCollector struct {
 	logger    *zap.SugaredLogger
 
 	config *ExporterConfig
+
+	// clientInfo caches the last client name lookup.
+	clientInfo struct {
+		sync.Mutex
+		identity   string
+		client     string
+		nextLookup time.Time
+	}
+	now func() time.Time
 
 	/// descriptors:
 	ValidatorActiveStake    *GaugeDesc
@@ -55,6 +72,7 @@ type SolanaCollector struct {
 	NodeMinimumLedgerSlot   *GaugeDesc
 	NodeFirstAvailableBlock *GaugeDesc
 	NodeIdentity            *GaugeDesc
+	NodeClientInfo          *GaugeDesc
 	NodeIsActive            *GaugeDesc
 	ValidatorCommission     *GaugeDesc
 	ValidatorBlsPubkeySet   *GaugeDesc
@@ -65,6 +83,7 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 		rpcClient: rpcClient,
 		logger:    slog.Get(),
 		config:    config,
+		now:       time.Now,
 		ValidatorActiveStake: NewGaugeDesc(
 			"solana_validator_active_stake",
 			fmt.Sprintf("Active stake (in SOL) per validator (represented by %s and %s)", VotekeyLabel, NodekeyLabel),
@@ -120,6 +139,11 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 			"Node identity of solana",
 			IdentityLabel,
 		),
+		NodeClientInfo: NewGaugeDesc(
+			"solana_node_client_info",
+			fmt.Sprintf("Validator client the node runs (%s)", ClientLabel),
+			ClientLabel,
+		),
 		NodeIsHealthy: NewGaugeDesc(
 			"solana_node_is_healthy",
 			"Whether the node is healthy",
@@ -161,6 +185,7 @@ func NewSolanaCollector(rpcClient *rpc.Client, config *ExporterConfig) *SolanaCo
 func (c *SolanaCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- c.NodeVersion.Desc
 	ch <- c.NodeIdentity.Desc
+	ch <- c.NodeClientInfo.Desc
 	ch <- c.ValidatorActiveStake.Desc
 	ch <- c.ClusterActiveStake.Desc
 	ch <- c.ValidatorLastVote.Desc
@@ -315,6 +340,58 @@ func (c *SolanaCollector) collectIdentity(ctx context.Context, ch chan<- prometh
 	c.logger.Info("Identity collected.")
 }
 
+// collectClientInfo exports the client name from the node's own entry in getClusterNodes.
+func (c *SolanaCollector) collectClientInfo(ctx context.Context, ch chan<- prometheus.Metric) {
+	c.logger.Info("Collecting client info...")
+	identity, err := c.rpcClient.GetIdentity(ctx)
+	if err != nil {
+		c.logger.Warnf("failed to get identity for client info, skipping: %v", err)
+		return
+	}
+
+	client := c.lookupClient(ctx, identity)
+	if client == "" {
+		return
+	}
+	ch <- c.NodeClientInfo.MustNewConstMetric(1, client)
+	c.logger.Info("Client info collected.")
+}
+
+// lookupClient returns the client name of identity, or "" if no name is known yet.
+func (c *SolanaCollector) lookupClient(ctx context.Context, identity string) string {
+	cache := &c.clientInfo
+	cache.Lock()
+	defer cache.Unlock()
+
+	now := c.now()
+	if cache.identity == identity && now.Before(cache.nextLookup) {
+		return cache.client
+	}
+	if cache.identity != identity {
+		// The cached name belongs to the old identity, so it must not be reported for the new one.
+		cache.identity, cache.client = identity, ""
+	}
+	// If the lookup fails, keep the last known name and try again soon.
+	cache.nextLookup = now.Add(clientInfoRetryInterval)
+
+	nodes, err := c.rpcClient.GetClusterNodes(ctx)
+	if err != nil {
+		c.logger.Warnf("failed to get cluster nodes for client info: %v", err)
+		return cache.client
+	}
+	i := slices.IndexFunc(nodes, func(n rpc.ClusterNode) bool { return n.Pubkey == identity })
+	switch {
+	case i < 0:
+		c.logger.Warnf("identity %s not found in getClusterNodes", identity)
+	case nodes[i].ClientID == nil || *nodes[i].ClientID == "":
+		c.logger.Warnf("identity %s has no clientId in getClusterNodes", identity)
+	default:
+		cache.client = *nodes[i].ClientID
+		cache.nextLookup = now.Add(clientInfoRefreshInterval)
+	}
+	return cache.client
+}
+
 func (c *SolanaCollector) collectMinimumLedgerSlot(ctx context.Context, ch chan<- prometheus.Metric) {
 	if c.config.LightMode {
 		c.logger.Debug("Skipping minimum ledger slot collection in light mode.")
@@ -404,6 +481,7 @@ func (c *SolanaCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collectBlsPubkeys(ctx, ch)
 	c.collectVersion(ctx, ch)
 	c.collectIdentity(ctx, ch)
+	c.collectClientInfo(ctx, ch)
 	c.collectBalances(ctx, ch)
 
 	c.logger.Info("=========== END COLLECTION ===========")

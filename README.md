@@ -148,6 +148,7 @@ The tables below describes all the metrics collected by the `solana-exporter`:
 | `solana_cluster_validator_count`               | Total number of validators in the cluster.                                                                            | `state`                       |
 | `solana_account_balance`                       | Solana account balances.                                                                                              | `address`                     |
 | `solana_node_version`                          | Node version of solana.                                                                                               | `version`                     |
+| `solana_node_client_info`                      | Validator client the node runs.                                                                                       | `client`                      |
 | `solana_node_is_healthy`                       | Whether the node is healthy.                                                                                          | N/A                           |
 | `solana_node_num_slots_behind`                 | The number of slots that the node is behind the latest cluster confirmed slot.                                        | N/A                           |
 | `solana_node_minimum_ledger_slot`              | The lowest slot that the node has information about in its ledger.                                                    | N/A                           |
@@ -185,6 +186,19 @@ is read from the parsed vote account data via the `getMultipleAccounts`
 validators (`-nodekey`'s or `-votekey`'s), regardless of `-comprehensive-vote-account-tracking`. A value of `0` means
 the vote account has no BLS pubkey, which under SIMD-0357 validator admission excludes it from the leader schedule.
 
+#### Client Info
+
+`solana_node_client_info` shows the validator client, for example `Agave` or `Firedancer`. It comes from the
+`clientId` of the node's own entry in [`getClusterNodes`](https://solana.com/docs/rpc/http/getclusternodes), looked up
+every 10 minutes for the current identity. If a lookup fails, the last known name is kept and the lookup is retried
+after 1 minute. If no name is known yet, the metric is skipped.
+
+Join it with the version:
+
+```promql
+solana_node_version * on (hostname) group_left(client) solana_node_client_info
+```
+
 ### Labels
 
 The table below describes the various metric labels:
@@ -195,6 +209,7 @@ The table below describes the various metric labels:
 | `votekey`          | Validator vote account address.               | e.g., `CertusDeBmqN8ZawdkxK5kFGMwBXdudvWHYwtNgNhvLu` |
 | `address`          | Solana account address.                       | e.g., `Certusm1sa411sMpV9FPqU5dXAYhmmhygvxJ23S6hJ24` |
 | `version`          | Solana node version.                          | e.g., `v1.18.23`                                     |
+| `client`           | Validator client name.                        | e.g., `Agave`, `Firedancer`                          |
 | `state`            | Whether a validator is current or delinquent. | `current`, `delinquent`                              |
 | `status`           | Whether a slot was skipped or valid.          | `valid`, `skipped`                                   |
 | `epoch`            | Solana epoch number.                          | e.g., `663`                                          |

@@ -65,8 +65,12 @@ func NewSimulator(t *testing.T, slot int) (*Simulator, *rpc.Client) {
 	}
 	mockServer, client := rpc.NewMockClient(t, rpc.MockConfig{
 		EasyResults: map[string]any{
-			"getVersion":        map[string]string{"solana-core": "v1.0.0"},
-			"getIdentity":       map[string]string{"identity": "testIdentity"},
+			"getVersion":  map[string]string{"solana-core": "v1.0.0"},
+			"getIdentity": map[string]string{"identity": "testIdentity"},
+			"getClusterNodes": []map[string]any{
+				{"pubkey": "otherIdentity", "clientId": "Firedancer"},
+				{"pubkey": "testIdentity", "clientId": "Agave"},
+			},
 			"getLeaderSchedule": leaderSchedule,
 			"getHealth":         "ok",
 		},
@@ -286,6 +290,9 @@ func TestSolanaCollector(t *testing.T) {
 		collector.NodeIsActive.makeCollectionTest(
 			NewLV(0, "testIdentity"),
 		),
+		collector.NodeClientInfo.makeCollectionTest(
+			NewLV(1, "Agave"),
+		),
 		collector.NodeIsHealthy.makeCollectionTest(
 			NewLV(1),
 		),
@@ -450,6 +457,7 @@ func TestSolanaCollector_LightMode(t *testing.T) {
 		runCollectionTests(t, collector, []collectionTest{
 			collector.NodeVersion.makeCollectionTest(NewLV(1, "v1.0.0")),
 			collector.NodeIdentity.makeCollectionTest(NewLV(1, "testIdentity")),
+			collector.NodeClientInfo.makeCollectionTest(NewLV(1, "Agave")),
 			collector.NodeIsHealthy.makeCollectionTest(NewLV(1)),
 			collector.NodeNumSlotsBehind.makeCollectionTest(NewLV(0)),
 		})
@@ -471,5 +479,149 @@ func TestSolanaCollector_LightMode(t *testing.T) {
 				assert.NoErrorf(t, err, "expected %s to be skipped in light mode", desc.Name)
 			})
 		}
+	})
+}
+
+// TestSolanaCollector_collectClientInfo checks the client name lookup. Failures skip the metric but not the scrape.
+func TestSolanaCollector_collectClientInfo(t *testing.T) {
+	tests := []struct {
+		name     string
+		nodes    []map[string]any
+		rpcError bool
+		expected string // "" means no sample
+	}{
+		{
+			name: "self entry with clientId",
+			nodes: []map[string]any{
+				{"pubkey": "otherIdentity", "clientId": "Agave"},
+				{"pubkey": "testIdentity", "clientId": "Firedancer"},
+			},
+			expected: "Firedancer",
+		},
+		{
+			name:     "client unknown to the node",
+			nodes:    []map[string]any{{"pubkey": "testIdentity", "clientId": "Unknown(99)"}},
+			expected: "Unknown(99)",
+		},
+		{
+			name:  "self entry without clientId",
+			nodes: []map[string]any{{"pubkey": "testIdentity"}, {"pubkey": "otherIdentity", "clientId": "Firedancer"}},
+		},
+		{
+			name:  "self entry missing",
+			nodes: []map[string]any{{"pubkey": "otherIdentity", "clientId": "Firedancer"}},
+		},
+		{
+			name:     "getClusterNodes not supported",
+			rpcError: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			simulator, client := NewSimulator(t, 0)
+			simulator.Server.SetOpt(rpc.EasyResultsOpt, "getClusterNodes", tt.nodes)
+			if tt.rpcError {
+				simulator.Server.SetOpt(rpc.EasyErrorsOpt, "getClusterNodes", rpc.Error{
+					Code: -32601, Method: "getClusterNodes", Message: "Method not found",
+				})
+			}
+			collector := NewSolanaCollector(client, newTestConfig(simulator, false))
+
+			metrics := collectToSlice(collector.collectClientInfo)
+			if tt.expected == "" {
+				assert.Empty(t, metrics)
+				// the whole scrape must still succeed:
+				err := testutil.CollectAndCompare(collector, bytes.NewBufferString(""), collector.NodeClientInfo.Name)
+				assert.NoError(t, err)
+				return
+			}
+			runCollectionTests(t, collector, []collectionTest{
+				collector.NodeClientInfo.makeCollectionTest(NewLV(1, tt.expected)),
+			})
+		})
+	}
+}
+
+// TestSolanaCollector_collectClientInfo_cache checks the cache refresh and the new lookup on an identity change.
+func TestSolanaCollector_collectClientInfo_cache(t *testing.T) {
+	simulator, client := NewSimulator(t, 0)
+	setNodes := func(clientID string) {
+		simulator.Server.SetOpt(rpc.EasyResultsOpt, "getClusterNodes", []map[string]any{
+			{"pubkey": "testIdentity", "clientId": clientID},
+			{"pubkey": "standbyIdentity", "clientId": clientID + "-standby"},
+		})
+	}
+	setNodes("Agave")
+
+	collector := NewSolanaCollector(client, newTestConfig(simulator, false))
+	now := time.Unix(1_700_000_000, 0)
+	collector.now = func() time.Time { return now }
+	expect := func(t *testing.T, clientID string) {
+		t.Helper()
+		runCollectionTests(t, collector, []collectionTest{
+			collector.NodeClientInfo.makeCollectionTest(NewLV(1, clientID)),
+		})
+	}
+
+	expect(t, "Agave")
+
+	// a new answer from the node is not seen while the cache is fresh:
+	setNodes("Firedancer")
+	now = now.Add(clientInfoRefreshInterval - time.Second)
+	expect(t, "Agave")
+
+	// ...and is seen after the refresh interval:
+	now = now.Add(2 * time.Second)
+	expect(t, "Firedancer")
+
+	// an identity change skips the cache:
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getIdentity", map[string]string{"identity": "standbyIdentity"})
+	expect(t, "Firedancer-standby")
+}
+
+// TestSolanaCollector_collectClientInfo_stale checks that a failed refresh keeps the last known name for the same
+// identity, but not for a new identity.
+func TestSolanaCollector_collectClientInfo_stale(t *testing.T) {
+	simulator, client := NewSimulator(t, 0)
+	collector := NewSolanaCollector(client, newTestConfig(simulator, false))
+	now := time.Unix(1_700_000_000, 0)
+	collector.now = func() time.Time { return now }
+	rpcError := rpc.Error{Code: -32000, Method: "getClusterNodes", Message: "simulated failure"}
+
+	runCollectionTests(t, collector, []collectionTest{
+		collector.NodeClientInfo.makeCollectionTest(NewLV(1, "Agave")),
+	})
+
+	// the refresh fails, so the last known name is kept:
+	simulator.Server.SetOpt(rpc.EasyErrorsOpt, "getClusterNodes", rpcError)
+	now = now.Add(clientInfoRefreshInterval)
+	runCollectionTests(t, collector, []collectionTest{
+		collector.NodeClientInfo.makeCollectionTest(NewLV(1, "Agave")),
+	})
+
+	// a new identity must not report the old identity's name:
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getIdentity", map[string]string{"identity": "standbyIdentity"})
+	assert.Empty(t, collectToSlice(collector.collectClientInfo))
+}
+
+// TestSolanaCollector_collectClientInfo_retry checks that a failed lookup is retried after clientInfoRetryInterval.
+func TestSolanaCollector_collectClientInfo_retry(t *testing.T) {
+	simulator, client := NewSimulator(t, 0)
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getClusterNodes", []map[string]any{})
+
+	collector := NewSolanaCollector(client, newTestConfig(simulator, false))
+	now := time.Unix(1_700_000_000, 0)
+	collector.now = func() time.Time { return now }
+
+	assert.Empty(t, collectToSlice(collector.collectClientInfo))
+
+	simulator.Server.SetOpt(rpc.EasyResultsOpt, "getClusterNodes", []map[string]any{
+		{"pubkey": "testIdentity", "clientId": "Firedancer"},
+	})
+	assert.Empty(t, collectToSlice(collector.collectClientInfo), "the failed lookup should be cached for a short time")
+
+	now = now.Add(clientInfoRetryInterval)
+	runCollectionTests(t, collector, []collectionTest{
+		collector.NodeClientInfo.makeCollectionTest(NewLV(1, "Firedancer")),
 	})
 }

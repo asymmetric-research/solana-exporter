@@ -489,3 +489,25 @@ func TestClient_GetIdentity(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "random2r1F4iWqVcb8M1DbAjQuFpebkQuW2DJtestkey", identity)
 }
+
+func TestClient_GetClusterNodes(t *testing.T) {
+	_, client := newMethodTester(t,
+		"getClusterNodes",
+		[]map[string]any{
+			{"clientId": "Agave", "pubkey": "agaveNode", "rpc": nil, "version": "4.3.2"},
+			{"clientId": "Unknown(99)", "pubkey": "unknownNode"},
+			{"pubkey": "noClientNode"},
+		},
+		nil,
+	)
+
+	nodes, err := client.GetClusterNodes(t.Context())
+	require.NoError(t, err)
+	require.Len(t, nodes, 3)
+	assert.Equal(t, "agaveNode", nodes[0].Pubkey)
+	require.NotNil(t, nodes[0].ClientID)
+	assert.Equal(t, "Agave", *nodes[0].ClientID)
+	require.NotNil(t, nodes[1].ClientID)
+	assert.Equal(t, "Unknown(99)", *nodes[1].ClientID)
+	assert.Nil(t, nodes[2].ClientID)
+}

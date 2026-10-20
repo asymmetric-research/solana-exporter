@@ -144,6 +144,7 @@ Cross-check against a direct RPC call wherever one exists. Allow for the few sec
 | `solana_node_is_healthy`                       | `1` for a healthy endpoint; `solana_node_num_slots_behind` is then `0` or small.                    |
 | `solana_node_version`                          | One series; label equals `getVersion["solana-core"]`.                                               |
 | `solana_node_identity`                         | One series; label equals `getIdentity.identity` (the RPC node, not a monitored validator).          |
+| `solana_node_client_info`                      | One series. Label equals `clientId` of the node's own (`getIdentity`) entry in `getClusterNodes`.   |
 | `solana_node_is_active`                        | `1` only if `-active-identity` equals the node's identity, else `0`. Label is the node's identity.  |
 | `solana_node_minimum_ledger_slot`              | Below current slot; equals `minimumLedgerSlot`.                                                     |
 | `solana_node_first_available_block`            | Equals `getFirstAvailableBlock` (`0` on BigTable-backed public RPC is normal).                      |
@@ -164,7 +165,7 @@ Cross-check against a direct RPC call wherever one exists. Allow for the few sec
 
 Configuration-specific expectations:
 
-- `light`: only node-local metrics (health, version, identity, `is_active`, epoch/slot/block height,
+- `light`: only node-local metrics (health, version, identity, client info, `is_active`, epoch/slot/block height,
   `transactions_total`). No `solana_validator_*`, `solana_cluster_*`, or `solana_account_balance` series.
 - `delinq`: `solana_validator_delinquent` is `1`; its `last_vote` is thousands of slots behind the cluster.
 - `compr`: `solana_validator_active_stake` has one series per vote account (current + delinquent);

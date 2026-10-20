@@ -59,6 +59,13 @@ type (
 		Delinquent []VoteAccount `json:"delinquent"`
 	}
 
+	// ClusterNode is one gossip node from getClusterNodes. Only the used fields are decoded.
+	ClusterNode struct {
+		Pubkey string `json:"pubkey"`
+		// ClientID is the client name, for example "Agave" or "Firedancer". Nil if the node does not report it.
+		ClientID *string `json:"clientId"`
+	}
+
 	// HostProduction is the [leaderSlots, blocksProduced] pair reported per identity by getBlockProduction.
 	HostProduction struct {
 		LeaderSlots    int64
